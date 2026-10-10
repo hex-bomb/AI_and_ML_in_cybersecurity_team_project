@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Path aliases */
+    "paths": {
+      "@/*": ["./src/*"],
+      "cn": ["./src/lib/utils.ts"],
+      // dexie 4.4.6 не отдаёт типы в карте exports: при moduleResolution
+      // "bundler" резолвится на import-wrapper.d.mts, который реэкспортирует
+      // сам себя, и все именованные типы (EntityTable, Table) теряются.
+      // Явный путь заставляет TS читать настоящие декларации из dist.
+      // Первый кандидат — npm workspaces (node_modules поднят в корень
+      // монорепозитория), второй — одиночная установка внутри пакета.
+      "dexie": [
+        "../node_modules/dexie/dist/dexie.d.ts",
+        "./node_modules/dexie/dist/dexie.d.ts"
+      ]
+    },
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,15 @@
+# Логи и временные файлы
+*.log
+npm-debug.log*
+.DS_Store
+
+# Зависимости и сборка
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Локальная конфигурация
+*.local
+.env.local
+.env.*.local

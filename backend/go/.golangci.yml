@@ -1,0 +1,116 @@
+# Линтер Go-модуля.
+#
+# Ключевое правило — запрет проникновения между слоями clean architecture:
+# домен не знает ни о ком, application знает только о домене, delivery и
+# infrastructure знают о домене и application, но не друг о друге. Без
+# этого правила слои разъезжаются уже ко второму этапу, и переезд на Go
+# заканчивается двумя монолитами вместо трёх слоёв.
+#
+# Правило проверяется дважды: этим линтером (быстро, в редакторе) и тестом
+# internal/arch/layers_test.go (обязательно в CI — он не зависит от версии
+# golangci-lint и от схемы конфига).
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - bodyclose
+    - errorlint
+    - copyloopvar
+    - misspell
+  settings:
+    depguard:
+      rules:
+        # Домен — чистый: только типы-значения, инварианты и ошибки. Импорт адаптера здесь означает, что бизнес-правило уехало
+        # в реализацию, и его больше нельзя подменить заглушкой в тесте.
+        domain:
+          files:
+            - "**/internal/domain/**"
+          deny:
+            - pkg: github.com/kbsearch/backend-go/internal/infrastructure
+              desc: "domain не зависит от infrastructure: порты объявляются здесь, реализации — там"
+            - pkg: github.com/kbsearch/backend-go/internal/application
+              desc: "domain не зависит от application: это нижний слой"
+            - pkg: github.com/kbsearch/backend-go/internal/delivery
+              desc: "domain не зависит от delivery"
+            - pkg: github.com/knights-analytics/hugot
+              desc: "домен объявляет порт Embedder; ONNX-инференс — за его пределами"
+            - pkg: github.com/tmc/langchaingo
+              desc: "домен объявляет порт LLM; langchaingo — реализация в infrastructure"
+            - pkg: github.com/elastic/go-elasticsearch
+              desc: "домен объявляет порт SearchIndex; клиент Elasticsearch — инфраструктура"
+            - pkg: github.com/jackc/pgx
+              desc: "домен объявляет репозитории; pgx — инфраструктура"
+
+        # Application собирает сценарии через порты домена. Прямой вызов
+        # адаптера лишает сценарий возможности подменить его в тесте.
+        application:
+          files:
+            - "**/internal/application/**"
+          deny:
+            - pkg: github.com/kbsearch/backend-go/internal/infrastructure
+              desc: "application работает через порты домена; прямой импорт адаптера — нарушение слоёв"
+            - pkg: github.com/kbsearch/backend-go/internal/delivery
+              desc: "application не знает о HTTP: транспорт — задача delivery"
+
+        # Delivery отвечает за транспорт и не должен знать, чем именно
+        # реализован поиск: он получает готовые зависимости от application.
+        delivery:
+          files:
+            - "**/internal/delivery/**"
+          deny:
+            - pkg: github.com/kbsearch/backend-go/internal/infrastructure
+              desc: "delivery собирает зависимости через application, а не импортирует адаптеры напрямую"
+
+        infrastructure:
+          files:
+            - "**/internal/infrastructure/**"
+          deny:
+            - pkg: github.com/kbsearch/backend-go/internal/delivery
+              desc: "инфраструктура не знает о транспортном слое"
+            - pkg: github.com/kbsearch/backend-go/internal/application/answers
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/auth
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/documents
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/indexing
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/jobs
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/kb
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/search
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/backend-go/internal/application/settings
+              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+
+  exclusions:
+    rules:
+      # Код, сгенерированный из OpenAPI, — не наш; правила к нему не применяем.
+      - path: internal/contracts/api.gen.go
+        linters:
+          - errcheck
+          - govet
+          - staticcheck
+          - unused
+      # Тесты вправе импортировать инфраструктуру: интеграционный тест
+      # проверяет адаптер так же, как его вызывает прод-код.
+      - path: _test\.go
+        linters:
+          - depguard
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

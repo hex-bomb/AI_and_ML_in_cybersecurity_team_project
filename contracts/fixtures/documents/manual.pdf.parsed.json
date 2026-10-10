@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "tenant_id": "11111111-1111-4111-8111-111111111111",
+  "kb_id": "22222222-2222-4222-8222-222222222222",
+  "document_id": "33333333-3333-4333-8333-333333333333",
+  "version_id": "44444444-4444-4444-8444-444444444444",
+  "title": "Manual",
+  "filename": "manual.pdf",
+  "content_sha256": "3e66d071dbd4cb8c90fb64a5d50ee809341a65ea41f549174d6726f0ae6acbd2",
+  "source_url": null,
+  "metadata": {
+    "product": "portal"
+  },
+  "blocks": [
+    {
+      "block_id": "9f700ad0-44ee-50f3-80c5-9827b384d18c",
+      "position": 0,
+      "kind": "paragraph",
+      "text": "Export\nOpen Settings.",
+      "section_path": [],
+      "page": 1
+    },
+    {
+      "block_id": "f1fddb9a-4a34-5c55-a63c-04f151bd3a6a",
+      "position": 1,
+      "kind": "paragraph",
+      "text": "Parameters\nField: format; Value: JSON",
+      "section_path": [],
+      "page": 2
+    }
+  ]
+}
