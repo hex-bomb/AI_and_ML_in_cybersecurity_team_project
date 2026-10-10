@@ -138,8 +138,12 @@ func TestDispatchRejectsOverlongInput(t *testing.T) {
 func TestRateLimiterWindow(t *testing.T) {
 	limiter := newRateLimiter(2, time.Minute)
 	now := time.Now()
-	if !limiter.allow("1.2.3.4", now) || !limiter.allow("1.2.3.4", now) {
-		t.Fatal("первые два запроса в окне отвергнуты")
+	// Вызовы разнесены по переменным намеренно: в одном условии `||`
+	// короткое замыкание скрыло бы, какой именно вызов отвергнут.
+	first := limiter.allow("1.2.3.4", now)
+	second := limiter.allow("1.2.3.4", now)
+	if !first || !second {
+		t.Fatalf("первые два запроса в окне отвергнуты: первый=%t второй=%t", first, second)
 	}
 	if limiter.allow("1.2.3.4", now) {
 		t.Fatal("третий запрос в окне принят")

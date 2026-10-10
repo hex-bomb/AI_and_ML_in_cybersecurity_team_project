@@ -1,14 +1,12 @@
 package elasticsearch
 
 // Интеграционные тесты против настоящего кластера (выполняются по умолчанию;
-// без кластера — пропуск, не падение). Стенд:
+// без кластера — пропуск, не падение). Стенд — compose.yaml:
 //
-//	docker run -d --name es_test -p 59201:9200 \
-//	  -e discovery.type=single-node -e xpack.security.enabled=false \
-//	  docker.elastic.co/elasticsearch/elasticsearch:8.17.3
+//	docker compose up -d elasticsearch
 //
-// Адрес — ELASTICSEARCH_TEST_URL (127.0.0.1:59201: IPv4 вместо localhost из-за
-// ::1 на macOS; нестандартный порт — чтобы не занимать 9200).
+// Адрес — ELASTICSEARCH_TEST_URL; по умолчанию 127.0.0.1:59200 — тот порт,
+// который compose публикует наружу (не 9200, чтобы не занимать стандартный).
 
 import (
 	"bytes"
@@ -39,7 +37,7 @@ func decodeJSON(r io.Reader, target any) error {
 	return json.NewDecoder(r).Decode(target)
 }
 
-const defaultTestURL = "http://127.0.0.1:59201"
+const defaultTestURL = "http://127.0.0.1:59200"
 
 // esURL — адрес тестового кластера.
 func esURL() string {

@@ -27,6 +27,7 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./compose/postgres/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kb} -d ${POSTGRES_DB:-kb}"]
       interval: 5s
@@ -90,6 +91,14 @@ services:
   worker:
     <<: *app-image
     entrypoint: ["/usr/local/bin/worker"]
+    # Воркер HTTP-сервера не поднимает, поэтому унаследованный из Dockerfile
+    # HEALTHCHECK на /health/live всегда падал бы (137 рестартов подряд).
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f /usr/local/bin/worker >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       <<: *app-env
     env_file: *app-env-file
