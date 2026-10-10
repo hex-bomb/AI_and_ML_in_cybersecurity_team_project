@@ -43,14 +43,21 @@ const LeaseDuration = 90 * time.Second
 const HeartbeatInterval = 30 * time.Second
 
 // GoStages returns stages served by the Go worker.
-func GoStages() []string { return []string{StageIndex} }
+//
+// Порядок значим для чтения: convert идёт раньше index, и так же выглядит
+// цепочка стадий одного документа — загрузка ставит convert, convert ставит
+// index. Список открыт для Claim: чужую стадию воркер не заберёт.
+func GoStages() []string { return []string{StageConvert, StageIndex} }
 
 // JobLease is a claimed job with its lease token.
 type JobLease struct {
-	JobID          uuid.UUID
-	TenantID       uuid.UUID
-	DocumentID     uuid.UUID
-	VersionID      *uuid.UUID
+	JobID      uuid.UUID
+	TenantID   uuid.UUID
+	DocumentID uuid.UUID
+	VersionID  *uuid.UUID
+	// KBID заполняется стадией convert: без него ParsedDocument остался бы
+	// без базы знаний, и индекс не смог бы взять профиль этой базы.
+	KBID           uuid.UUID
 	Kind           string
 	Stage          string
 	Attempt        int
@@ -60,6 +67,9 @@ type JobLease struct {
 
 // IsIndexStage reports the index stage.
 func (l JobLease) IsIndexStage() bool { return l.Stage == StageIndex }
+
+// IsConvertStage reports the convert stage.
+func (l JobLease) IsConvertStage() bool { return l.Stage == StageConvert }
 
 // VersionIDValue returns the version id or false.
 func (l JobLease) VersionIDValue() (uuid.UUID, bool) {

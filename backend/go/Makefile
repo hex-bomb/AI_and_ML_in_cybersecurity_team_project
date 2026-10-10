@@ -57,6 +57,17 @@ cover: ## Покрытие пакетами
 	$(GO) test -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out | tail -1
 
+# Порог покрытия — храповик: он не падает «вниз», а должен расти. Значение
+# поднимается вручную вместе с тестами, а не падает с 80% одним куском.
+COVER_MIN ?= 35
+.PHONY: cover-gate
+cover-gate: ## Проверить, что покрытие не ниже COVER_MIN (по умолчанию 35%)
+	$(GO) test -coverprofile=coverage.out ./... >/dev/null
+	@total=$$($(GO) tool cover -func=coverage.out | awk '/^total:/ {gsub("%","",$$3); print $$3}'); \
+		awk -v t="$$total" -v m="$(COVER_MIN)" 'BEGIN { \
+			if (t+0 < m+0) { printf "покрытие %.1f%% ниже порога %s%%\n", t, m; exit 1 } \
+			printf "покрытие %.1f%% (порог %s%%)\n", t, m }'
+
 .PHONY: vet
 vet: ## go vet
 	$(GO) vet ./...

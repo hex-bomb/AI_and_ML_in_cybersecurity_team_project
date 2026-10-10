@@ -178,6 +178,65 @@ func (r *DocumentRepository) LoadParsed(
 	return parsed, nil
 }
 
+// LoadVersion читает версию вместе с байтами оригинала — что разбирает стадия
+// convert.
+//
+// Атрибуты версии и её байты читаются одним вызовом намеренно: два отдельных
+// чтения — это два снимка состояния, и между ними Retry успел бы сменить
+// статус версии, из-за чего разобранное соответствовало бы не той версии,
+// которую воркер держит под lease.
+func (r *DocumentRepository) LoadVersion(
+	ctx context.Context, q ports.Queryer, store ports.FileStorage, tenantID, versionID string,
+) (domain.ConvertVersion, error) {
+	tenant, err := parseUUID("tenant_id", tenantID)
+	if err != nil {
+		return domain.ConvertVersion{}, err
+	}
+	version, err := parseUUID("version_id", versionID)
+	if err != nil {
+		return domain.ConvertVersion{}, err
+	}
+
+	var (
+		out           domain.ConvertVersion
+		sourceURL     *string
+		originalKey   string
+		contentSHA256 string
+		metadata      []byte
+	)
+	err = q.QueryRow(ctx, `
+		SELECT filename, title, source_url, content_sha256, original_key, metadata
+		FROM document_versions WHERE id = $1 AND tenant_id = $2`,
+		version, tenant).Scan(
+		&out.Filename, &out.Title, &sourceURL,
+		&contentSHA256, &originalKey, &metadata,
+	)
+	if err != nil {
+		return domain.ConvertVersion{}, noRows(err, "Версия документа не найдена")
+	}
+
+	out.SourceURL = sourceURL
+	out.ContentSHA256 = contentSHA256
+	if len(metadata) > 0 {
+		if err := json.Unmarshal(metadata, &out.Metadata); err != nil {
+			return domain.ConvertVersion{}, fmt.Errorf("metadata версии %s: %w", version, err)
+		}
+	}
+
+	// Пустой original_key — дефект загрузки: читать нечего, и молча
+	// разобрать пустой документ означало бы записать в parsed.json то, что
+	// стадия index потом сочтёт содержимым.
+	if originalKey == "" {
+		return domain.ConvertVersion{}, domain.NotFound("Оригинал версии не сохранён")
+	}
+	content, err := store.Read(ctx, originalKey)
+	if err != nil {
+		return domain.ConvertVersion{}, err
+	}
+	out.Content = content
+	return out, nil
+}
+
 // ActivateVersion переключает active_version_id (возвращает прежнюю для cleanup).
 // Порядок блокировок фиксирован: KB -> document -> job -> version.
 // Транзакцию открывает вызывающий (одна с FinishIndex, ТЗ 6.3 п.7).

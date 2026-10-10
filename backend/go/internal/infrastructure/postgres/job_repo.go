@@ -163,6 +163,83 @@ func (r *JobRepository) Heartbeat(ctx context.Context, q ports.Queryer, jobID, l
 	return true, nil
 }
 
+// FinishConvert завершает стадию convert: помечает версию разобранной и
+// переводит задание на стадию index (ТЗ 3.6 advance_to_index).
+//
+// Перевод делается UPDATE-ом той же строки jobs, а не вставкой нового задания.
+// Это и есть механизм идемпотентности: у задания одна строка, второй перевод
+// невозможен физически, а unique-индекс uq_jobs_active_ingest (одно активное
+// ingest-задание на документ) не может быть нарушен. Новая строка конфликтовала
+// бы с текущим заданием и упиралась в этот индекс.
+//
+// Обе записи — в одной транзакции вызывающего. Расходятся они лишь в одном
+// сценарии: версия в статусе parsed, а задание всё ещё висит на convert.
+// Повтор тогда не помогает — parsed_key уже записан, и стадия convert решит,
+// что работа сделана.
+func (r *JobRepository) FinishConvert(
+	ctx context.Context, tx ports.Queryer, jobID, leaseToken string, res domain.ConversionResult,
+) error {
+	job, err := parseUUID("job_id", jobID)
+	if err != nil {
+		return err
+	}
+	version, err := parseUUID("version_id", res.VersionID)
+	if err != nil {
+		return err
+	}
+
+	record, err := r.lockRunningJob(ctx, tx, job, leaseToken)
+	if err != nil {
+		return err
+	}
+	// Чужая стадия — ошибка вызывающего, молча закрывать нельзя.
+	if record.Stage != domain.StageConvert {
+		return domain.JobLeaseLost("Задание не на этапе convert")
+	}
+	if record.VersionID == nil || *record.VersionID != version {
+		return domain.Conflict("Задание convert ссылается на другую версию")
+	}
+	// Порядок блокировок как в Fail (задание -> версия).
+	if err := lockVersion(ctx, tx, version, record.DocumentID); err != nil {
+		return err
+	}
+
+	const versionQuery = `
+		UPDATE document_versions
+		SET parsed_key = $3,
+			status     = 'parsed',
+			failed_stage  = NULL,
+			error_code    = NULL,
+			error_message = NULL
+		WHERE id = $1 AND document_id = $2`
+	if _, err := tx.Exec(ctx, versionQuery, version, record.DocumentID, res.ParsedKey); err != nil {
+		return err
+	}
+
+	// Счётчик попыток обнуляется: стадия сменилась, и её попытки должны
+	// считаться заново — иначе версия, пережившая две неудачи на convert,
+	// получила бы на index ноль повторов вместо трёх.
+	const jobQuery = `
+		UPDATE jobs
+		SET status          = 'queued',
+			stage           = $3,
+			attempt         = 0,
+			next_attempt_at = $4,
+			lease_token     = NULL,
+			lease_expires_at = NULL,
+			error_code      = NULL,
+			error_message   = NULL,
+			processed_chunks = $5,
+			total_chunks     = $5,
+			updated_at       = $4
+		WHERE id = $1 AND lease_token = $2`
+	if _, err := tx.Exec(ctx, jobQuery, job, leaseToken,
+		domain.StageIndex, r.clock.Now(), res.BlockCount); err != nil {
+		return err
+	}
+	return nil
+}
+
 // FinishIndex завершает задание в одной транзакции с ActivateVersion (ТЗ 6.3 п.7).
 func (r *JobRepository) FinishIndex(
 	ctx context.Context, tx ports.Queryer, jobID, leaseToken string, res domain.IndexingResult,

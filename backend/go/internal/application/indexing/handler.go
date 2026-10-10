@@ -24,6 +24,10 @@ type Deps struct {
 	Storage    ports.FileStorage
 	Queryer    ports.Queryer
 	Transactor ports.Transactor
+	// ParsedKey строит ключ parsed.json. Нужен только стадии convert, поэтому
+	// не проверяется на этапе сборки NewIndexer: стадия индексации ключ не
+	// строит, и требовать его там означало бы запретить частичную сборку.
+	ParsedKey keyBuilder
 }
 
 // Indexer runs the index stage from ParsedDocument to active version.

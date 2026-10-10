@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -207,10 +208,21 @@ func TestJobLeaseStageHelpers(t *testing.T) {
 	if convert.IsIndexStage() {
 		t.Error("стадия convert ошибочно распознана как index")
 	}
+	if !convert.IsConvertStage() {
+		t.Error("стадия convert не распознана как convert")
+	}
 
+	// Обе стадии загрузки обслуживает Go: convert ставит приём файла,
+	// index — стадия convert. Без convert документ остался бы без
+	// parsed.json навсегда.
 	stages := GoStages()
-	if len(stages) != 1 || stages[0] != StageIndex {
-		t.Errorf("GoStages() = %v, ожидалось [%s]", stages, StageIndex)
+	if !slices.Contains(stages, StageConvert) || !slices.Contains(stages, StageIndex) {
+		t.Errorf("GoStages() = %v, ожидались convert и index", stages)
+	}
+	for _, stage := range stages {
+		if stage != StageConvert && stage != StageIndex {
+			t.Errorf("в GoStages() чужая стадия %q: её обслуживает другой воркер", stage)
+		}
 	}
 
 	if _, ok := index.VersionIDValue(); ok {

@@ -10,6 +10,9 @@ import (
 type DocumentRepository interface {
 	GetAllowedActiveVersions(ctx context.Context, q Queryer, p domain.Principal, kbID string) ([]domain.ActiveVersion, error)
 	LoadParsed(ctx context.Context, q Queryer, store FileStorage, tenantID, versionID string) (domain.ParsedDocument, error)
+	// LoadVersion reads the version row together with its original bytes —
+	// what the convert stage parses.
+	LoadVersion(ctx context.Context, q Queryer, store FileStorage, tenantID, versionID string) (domain.ConvertVersion, error)
 	VersionSources(ctx context.Context, q Queryer, p domain.Principal, kbID string, active map[string]string) (map[string]string, error)
 	ActivateVersion(ctx context.Context, tx Queryer, p domain.ActivateParams) (previousVersionID string, err error)
 	IngestBusy(ctx context.Context, q Queryer, documentID string) (bool, error)
@@ -31,10 +34,13 @@ type SettingsRepository interface {
 	Levels(ctx context.Context, q Queryer, tenantID, kbID string) (kbLevel, tenantLevel map[string]any, err error)
 }
 
-// JobRepository serves ONLY the index stage.
+// JobRepository serves the convert and index stages.
 type JobRepository interface {
 	Claim(ctx context.Context, q Queryer, workerID string, stages []string) (*domain.JobLease, error)
 	Heartbeat(ctx context.Context, q Queryer, jobID, leaseToken string) (bool, error)
+	// FinishConvert marks the version parsed and advances the job to the
+	// index stage (ТЗ 3.6 advance_to_index).
+	FinishConvert(ctx context.Context, tx Queryer, jobID, leaseToken string, res domain.ConversionResult) error
 	FinishIndex(ctx context.Context, tx Queryer, jobID, leaseToken string, res domain.IndexingResult) error
 	Fail(ctx context.Context, tx Queryer, jobID, leaseToken, code, message string, retryable bool) error
 	EnqueueCleanup(ctx context.Context, tx Queryer, tenantID, documentID, versionID string) (string, error)

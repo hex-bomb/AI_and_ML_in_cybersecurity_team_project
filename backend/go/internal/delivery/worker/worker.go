@@ -17,6 +17,9 @@ import (
 
 // Stage — обработчик стадии задания (реализация в application, чтобы сценарий не знал о lease).
 type Stage interface {
+	// Convert выполняет стадию convert: оригинал версии превращается в
+	// ParsedDocument, а задание переводится на index.
+	Convert(ctx context.Context, lease domain.JobLease) error
 	// Index выполняет стадию index (постоянные коды не повторяются, ТЗ 2.4).
 	Index(ctx context.Context, lease domain.JobLease) error
 }
@@ -135,6 +138,8 @@ func (w *Worker) process(ctx context.Context, lease domain.JobLease) {
 // stage выбирает обработчик по стадии (чужая стадия — ошибка границы, не молчаливый index).
 func (w *Worker) stage(ctx context.Context, lease domain.JobLease) error {
 	switch lease.Stage {
+	case domain.StageConvert:
+		return w.deps.Stage.Convert(ctx, lease)
 	case domain.StageIndex:
 		return w.deps.Stage.Index(ctx, lease)
 	default:

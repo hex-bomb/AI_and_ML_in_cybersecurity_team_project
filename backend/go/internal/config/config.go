@@ -27,8 +27,10 @@ const (
 	defaultLocalTenantID        = "11111111-1111-4111-8111-111111111111"
 	defaultMaxUploadBytes       = 20 * 1024 * 1024
 	defaultWorkerPollInterval   = 2000
-	defaultAllowedUploadExts    = ".md,.docx,.pdf"
-	maxLLMToolRounds            = 8
+	// Источник №1 по схеме развёртывания — Markdown / HTML / TXT.
+	// PDF и DOCX разбирает Tika (см. internal/infrastructure/parsers/tika).
+	defaultAllowedUploadExts = ".md,.txt,.html,.docx,.pdf"
+	maxLLMToolRounds         = 8
 )
 
 // Config is the process configuration, shared by API and worker.

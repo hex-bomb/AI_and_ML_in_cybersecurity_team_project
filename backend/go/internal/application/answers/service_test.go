@@ -88,6 +88,13 @@ func (f *fakeDocs) LoadParsed(
 ) (domain.ParsedDocument, error) {
 	return domain.ParsedDocument{}, errUnusedPort
 }
+
+// LoadVersion стадии convert: поиск и ответы версию не читают.
+func (f *fakeDocs) LoadVersion(
+	context.Context, ports.Queryer, ports.FileStorage, string, string,
+) (domain.ConvertVersion, error) {
+	return domain.ConvertVersion{}, errUnusedPort
+}
 func (f *fakeDocs) ActivateVersion(
 	context.Context, ports.Queryer, domain.ActivateParams,
 ) (string, error) {

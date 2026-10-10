@@ -15,6 +15,7 @@ import (
 	"github.com/kbsearch/backend-go/internal/delivery/worker"
 	"github.com/kbsearch/backend-go/internal/domain"
 	"github.com/kbsearch/backend-go/internal/infrastructure/postgres"
+	"github.com/kbsearch/backend-go/internal/infrastructure/storage"
 )
 
 func main() {
@@ -46,22 +47,28 @@ func run(logger *slog.Logger) error {
 	clock := ports.SystemClock{}
 	jobs := postgres.NewJobRepository(clock)
 
+	// Одни и те же порты на обе стадии: стадия convert и стадия index
+	// работают с одной версией документа, и разные экземпляры репозитория
+	// означали бы разные снимки состояния одной версии.
+	stageDeps := indexing.Deps{
+		Documents:  postgres.NewDocumentRepository(clock),
+		Jobs:       jobs,
+		Settings:   settings.New(postgres.NewSettingsRepository()),
+		Embedder:   deps.Embedder,
+		Index:      deps.Index,
+		Storage:    deps.Storage,
+		Queryer:    deps.Pool,
+		Transactor: deps.Pool,
+		ParsedKey:  storage.ParsedKey,
+	}
+
 	loop := worker.New(worker.Deps{
 		Jobs:       jobs,
 		Queryer:    deps.Pool,
 		Transactor: deps.Pool,
 		Clock:      clock,
 		Logger:     logger,
-		Stage: indexing.NewIndexer(indexing.Deps{
-			Documents:  postgres.NewDocumentRepository(clock),
-			Jobs:       jobs,
-			Settings:   settings.New(postgres.NewSettingsRepository()),
-			Embedder:   deps.Embedder,
-			Index:      deps.Index,
-			Storage:    deps.Storage,
-			Queryer:    deps.Pool,
-			Transactor: deps.Pool,
-		}),
+		Stage:      newStages(indexing.NewConverter(stageDeps), indexing.NewIndexer(stageDeps)),
 	}, worker.Options{PollInterval: cfg.WorkerPollInterval})
 
 	logger.Info("обработка очереди запущена", "stages", domain.GoStages())

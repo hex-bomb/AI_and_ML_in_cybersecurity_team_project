@@ -1,0 +1,696 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" agent="claude" version="24.0.0">
+ <diagram id="page1" name="1. Deployment: одна ВМ">
+  <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2420" pageHeight="1450" math="0" shadow="0">
+   <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="title" value="&lt;b&gt;Развёртывание на одной ВМ (UML/C4 «Deployment diagram»): клиенты → Caddy → Go-монолит → хранилища и ML-контейнеры&lt;/b&gt;" style="text;fontSize=15;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="20" y="8" width="1800" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="c_web" value="&lt;b&gt;Браузер (Web UI)&lt;/b&gt;&lt;br&gt;React + Vite SPA (статика из Caddy)&lt;br&gt;HTTPS :443" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="30" y="110" width="230" height="80" as="geometry" />
+    </mxCell>
+    <mxCell id="c_desk" value="&lt;b&gt;Desktop-приложение&lt;/b&gt;&lt;br&gt;Wails (Go + web UI): хоткей → заметка&lt;br&gt;очередь SQLite при отсутствии сети&lt;br&gt;HTTPS :443" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="30" y="210" width="230" height="100" as="geometry" />
+    </mxCell>
+    <mxCell id="c_mcp" value="&lt;b&gt;MCP-клиенты&lt;/b&gt;&lt;br&gt;IDE / агенты&lt;br&gt;Streamable HTTP /mcp, OAuth 2.1" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="30" y="330" width="230" height="80" as="geometry" />
+    </mxCell>
+    <mxCell id="c_adm" value="&lt;b&gt;Админ&lt;/b&gt;&lt;br&gt;SSH :22 только через VPN" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="30" y="430" width="230" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="ext" value="&lt;b&gt;Существующая инфраструктура демо-компании&lt;/b&gt;&lt;br&gt;&lt;i&gt;(состав уточнить: DNS, прокси, IdP, мониторинг — переиспользуем, если есть)&lt;/i&gt;" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="30" y="560" width="250" height="420" as="geometry" />
+    </mxCell>
+    <mxCell id="x1" value="&lt;b&gt;Источник №1&lt;/b&gt;&lt;br&gt;Markdown / HTML / TXT: папка или zip (импорт по HTTPS/SFTP)" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="ext">
+     <mxGeometry x="10" y="70" width="230" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="x2" value="&lt;b&gt;Источник №2&lt;/b&gt;&lt;br&gt;PDF / DOCX → текст через Tika" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="ext">
+     <mxGeometry x="10" y="150" width="230" height="56" as="geometry" />
+    </mxCell>
+    <mxCell id="x3" value="&lt;b&gt;Следующий коннектор&lt;/b&gt;&lt;br&gt;Slack (фаза 1.5): pull + Events API" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="ext">
+     <mxGeometry x="10" y="216" width="230" height="56" as="geometry" />
+    </mxCell>
+    <mxCell id="x4" value="&lt;b&gt;Корпоративный IdP&lt;/b&gt; (если есть)&lt;br&gt;OIDC / SAML → federation в Keycloak" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="ext">
+     <mxGeometry x="10" y="282" width="230" height="56" as="geometry" />
+    </mxCell>
+    <mxCell id="vm" value="&lt;b&gt;VM-1 · Linux (Ubuntu LTS) · Docker Engine + compose v2&lt;/b&gt;&lt;br&gt;8 vCPU · 32 GB RAM · 200 GB SSD · без GPU (оценка для PoC на 50–200 документов)" style="fillColor=#f4f8ff;strokeColor=#2c3e50;fontSize=12;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="310" y="50" width="1500" height="1360" as="geometry" />
+    </mxCell>
+    <mxCell id="g_edge" value="&lt;b&gt;net: edge&lt;/b&gt; (наружу публикуется только Caddy)" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;dashed=1;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="20" y="70" width="270" height="440" as="geometry" />
+    </mxCell>
+    <mxCell id="caddy" value="&lt;b&gt;caddy&lt;/b&gt; · :80, :443 (published)&lt;br&gt;• TLS (ACME или корпоративный сертификат)&lt;br&gt;• статика React: /srv/web&lt;br&gt;• app.&amp;lt;домен&amp;gt; → kb-api:8081&lt;br&gt;  (/api, /mcp, /.well-known)&lt;br&gt;• auth.&amp;lt;домен&amp;gt; → keycloak:8180&lt;br&gt;• grafana.&amp;lt;домен&amp;gt; → grafana:3000&lt;br&gt;RAM ≈ 50 MB" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_edge">
+     <mxGeometry x="10" y="36" width="250" height="180" as="geometry" />
+    </mxCell>
+    <mxCell id="kc" value="&lt;b&gt;keycloak&lt;/b&gt; · :8180 (HTTP), :9000 (mgmt)&lt;br&gt;• realm kb из realm.json (в репозитории)&lt;br&gt;• клиенты: web (code+PKCE), desktop (public,&lt;br&gt;  loopback), mcp (resource), ingest (service)&lt;br&gt;• federation: корпоративный IdP, OIDC/SAML&lt;br&gt;• БД: postgres:5432/keycloak&lt;br&gt;RAM ≈ 1 GB" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_edge">
+     <mxGeometry x="10" y="236" width="250" height="195" as="geometry" />
+    </mxCell>
+    <mxCell id="g_app" value="&lt;b&gt;net: app&lt;/b&gt; · один образ kb, две команды" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;dashed=1;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="330" y="70" width="290" height="500" as="geometry" />
+    </mxCell>
+    <mxCell id="api" value="&lt;b&gt;kb-api&lt;/b&gt; (Go) · :8081&lt;br&gt;/api/v1 · /mcp · /healthz · /metrics&lt;br&gt;• authn: проверка JWT (JWKS из Keycloak, кэш)&lt;br&gt;• поиск: ES BM25 ∥ kNN → RRF → сигналы&lt;br&gt;• AGDLP: фильтр прав + post-check в PG&lt;br&gt;• комментарии, оценки, права, админка&lt;br&gt;• логи поиска → ClickHouse (batch)&lt;br&gt;RAM ≈ 300 MB" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_app">
+     <mxGeometry x="10" y="36" width="270" height="200" as="geometry" />
+    </mxCell>
+    <mxCell id="wrk" value="&lt;b&gt;kb-worker&lt;/b&gt; (Go) · :8082&lt;br&gt;/healthz · /metrics&lt;br&gt;• River-воркеры: normalize → enrich → index → derive&lt;br&gt;• импорт источников (pull по курсору)&lt;br&gt;• periodic: PageRank, freshness, lag коннекторов&lt;br&gt;• клиенты: TEI, Tika, Ollama (HTTP)&lt;br&gt;• запись: PG, ES, ClickHouse, MinIO&lt;br&gt;RAM ≈ 500 MB" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_app">
+     <mxGeometry x="10" y="256" width="270" height="225" as="geometry" />
+    </mxCell>
+    <mxCell id="g_data" value="&lt;b&gt;net: data&lt;/b&gt; (internal)" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;dashed=1;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="670" y="70" width="270" height="705" as="geometry" />
+    </mxCell>
+    <mxCell id="pg" value="&lt;b&gt;postgres&lt;/b&gt; · :5432&lt;br&gt;БД kb: users, groups, acl, документы (реестр),&lt;br&gt;комментарии, рёбра графа, очередь River;&lt;br&gt;БД keycloak&lt;br&gt;RAM ≈ 1 GB · vol: /srv/kb/pg" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_data">
+     <mxGeometry x="10" y="36" width="250" height="125" as="geometry" />
+    </mxCell>
+    <mxCell id="es" value="&lt;b&gt;elasticsearch&lt;/b&gt; · :9200 (single-node)&lt;br&gt;heap 2 GB (Xms=Xmx), security вкл., API-key для kb&lt;br&gt;индекс kb-docs-v1, alias kb-docs&lt;br&gt;анализаторы: russian + без стемминга (коды)&lt;br&gt;dense_vector 1024, HNSW, cosine&lt;br&gt;поля прав: space_id[], acl[]&lt;br&gt;RAM ≈ 4 GB · vol: /srv/kb/es" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_data">
+     <mxGeometry x="10" y="171" width="250" height="190" as="geometry" />
+    </mxCell>
+    <mxCell id="ch" value="&lt;b&gt;clickhouse&lt;/b&gt; · :8123 (HTTP), :9000 (native)&lt;br&gt;raw_events (журнал lake), search_log,&lt;br&gt;feedback_events, ingest_metrics&lt;br&gt;RAM ≈ 2 GB · vol: /srv/kb/ch" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_data">
+     <mxGeometry x="10" y="371" width="250" height="110" as="geometry" />
+    </mxCell>
+    <mxCell id="s3" value="&lt;b&gt;object storage&lt;/b&gt; · :9000 (S3 API), :9001 (UI)&lt;br&gt;MinIO (или Garage/SeaweedFS: проверить статус&lt;br&gt;лицензии community-версии MinIO)&lt;br&gt;bucket kb-raw: sha256/… (сырые файлы)&lt;br&gt;RAM ≈ 0,5 GB · vol: /srv/kb/minio" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_data">
+     <mxGeometry x="10" y="491" width="250" height="125" as="geometry" />
+    </mxCell>
+    <mxCell id="g_obs" value="&lt;b&gt;profile: ops&lt;/b&gt;" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;dashed=1;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="960" y="70" width="500" height="270" as="geometry" />
+    </mxCell>
+    <mxCell id="prom" value="&lt;b&gt;prometheus&lt;/b&gt; · :9090&lt;br&gt;скрейп /metrics: kb-api, kb-worker,&lt;br&gt;ES/CH/PG-экспортеры; хранение 15 дней" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_obs">
+     <mxGeometry x="10" y="36" width="230" height="95" as="geometry" />
+    </mxCell>
+    <mxCell id="graf" value="&lt;b&gt;grafana&lt;/b&gt; · :3000&lt;br&gt;grafana.&amp;lt;домен&amp;gt; через Caddy,&lt;br&gt;вход по SSO (Keycloak)" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_obs">
+     <mxGeometry x="250" y="36" width="240" height="95" as="geometry" />
+    </mxCell>
+    <mxCell id="loki" value="&lt;b&gt;loki&lt;/b&gt; :3100 + promtail (опц.)&lt;br&gt;логи контейнеров: slog в JSON" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_obs">
+     <mxGeometry x="10" y="141" width="230" height="80" as="geometry" />
+    </mxCell>
+    <mxCell id="alert" value="&lt;b&gt;alertmanager&lt;/b&gt; · :9093 (опц.)&lt;br&gt;lag коннектора, диск, ES red" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_obs">
+     <mxGeometry x="250" y="141" width="240" height="80" as="geometry" />
+    </mxCell>
+    <mxCell id="bkp" value="&lt;b&gt;backup&lt;/b&gt; (cron-контейнер, restic)&lt;br&gt;• pg_dump: kb + keycloak (ежедневно)&lt;br&gt;• clickhouse-backup → внешний S3&lt;br&gt;• bucket kb-raw → restic / mc mirror&lt;br&gt;• Elasticsearch НЕ бэкапим: kb reindex из lake&lt;br&gt;• восстановление проверять учениями" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="960" y="360" width="500" height="130" as="geometry" />
+    </mxCell>
+    <mxCell id="host" value="&lt;b&gt;Хост и безопасность&lt;/b&gt;&lt;br&gt;• compose profiles: core · ml · ops · phase2&lt;br&gt;• nftables/ufw: наружу только 80/443; SSH — через VPN&lt;br&gt;• секреты: .env + sops/age; отдельный пользователь kb&lt;br&gt;• тома: /srv/kb/{pg,ch,es,minio,models}&lt;br&gt;• sysctl vm.max_map_count=262144 (для Elasticsearch)&lt;br&gt;• mem_limit на каждый контейнер, restart: unless-stopped" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="960" y="505" width="500" height="145" as="geometry" />
+    </mxCell>
+    <mxCell id="g_ml" value="&lt;b&gt;net: ml&lt;/b&gt; (internal; CPU-инференс на PoC, образы TEI/Ollama с кэшем моделей в /srv/kb/models)" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;dashed=1;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="20" y="810" width="1460" height="250" as="geometry" />
+    </mxCell>
+    <mxCell id="emb" value="&lt;b&gt;tei-embed&lt;/b&gt; · :8090 → 80&lt;br&gt;HF Text Embeddings Inference (CPU)&lt;br&gt;модель: BAAI/bge-m3 (мультиязычная,&lt;br&gt;1024-мерные эмбеддинги, ctx 8192)&lt;br&gt;RAM ≈ 3,5 GB" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_ml">
+     <mxGeometry x="10" y="40" width="270" height="130" as="geometry" />
+    </mxCell>
+    <mxCell id="rr" value="&lt;b&gt;tei-rerank&lt;/b&gt; · :8091 → 80 (опц.)&lt;br&gt;TEI, cross-encoder&lt;br&gt;модель: BAAI/bge-reranker-v2-m3&lt;br&gt;включается флагом, top-50&lt;br&gt;RAM ≈ 3 GB" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_ml">
+     <mxGeometry x="300" y="40" width="270" height="130" as="geometry" />
+    </mxCell>
+    <mxCell id="llm" value="&lt;b&gt;ollama&lt;/b&gt; · :11434 (опц.)&lt;br&gt;LLM: локальная instruct ~7–8B, Q4&lt;br&gt;кандидат: Qwen3-8B (выбрать по eval на&lt;br&gt;русском); нужен для «ответа по документам»&lt;br&gt;и детектора конфликтов; RAM ≈ 7 GB" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_ml">
+     <mxGeometry x="590" y="40" width="270" height="130" as="geometry" />
+    </mxCell>
+    <mxCell id="tika" value="&lt;b&gt;tika&lt;/b&gt; · :9998 (опц.)&lt;br&gt;Apache Tika server: PDF / DOCX / PPTX → текст&lt;br&gt;профиль docs; RAM ≈ 1 GB" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_ml">
+     <mxGeometry x="880" y="40" width="270" height="130" as="geometry" />
+    </mxCell>
+    <mxCell id="stt" value="&lt;b&gt;whisper-server&lt;/b&gt; · :8092 (фаза 2)&lt;br&gt;faster-whisper: диктовка в desktop&lt;br&gt;модель: small/medium для CPU&lt;br&gt;(выбрать по качеству на русском)" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_ml">
+     <mxGeometry x="1170" y="40" width="270" height="130" as="geometry" />
+    </mxCell>
+    <mxCell id="mlnote" value="Все модели — за интерфейсами Embedder / Reranker / LLM; название и версия модели хранятся в документе → смена модели = новое поле vec_v2 + reindex из lake, без остановки поиска." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="g_ml">
+     <mxGeometry x="10" y="180" width="1430" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="ram" value="&lt;b&gt;Бюджет RAM (оценка, не замер)&lt;/b&gt;&lt;br&gt;ES 4 · ClickHouse 2 · Postgres 1 · Keycloak 1 · MinIO 0,5 · TEI-embed 3,5 · TEI-rerank 3 · LLM 7 · Tika 1 · Go ×2 1 · ops 1,5 · ОС 2&lt;br&gt;&lt;b&gt;≈ 27 ГБ → ВМ 32 ГБ.&lt;/b&gt; Без LLM и reranker ≈ 17 ГБ → хватит 24 ГБ.&lt;br&gt;Диск: данные 50–200 документов — мегабайты; основное место занимают модели (порядка 10–15 ГБ) и образы." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="20" y="1080" width="740" height="120" as="geometry" />
+    </mxCell>
+    <mxCell id="order" value="&lt;b&gt;Порядок запуска&lt;/b&gt; (depends_on + healthcheck)&lt;br&gt;postgres → keycloak, clickhouse, elasticsearch, minio →&lt;br&gt;kb migrate (PG, ClickHouse, шаблоны индекса ES) →&lt;br&gt;kb-api, kb-worker → caddy&lt;br&gt;ML-контейнеры стартуют независимо; kb-worker ждёт tei-embed по /health" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="780" y="1080" width="700" height="120" as="geometry" />
+    </mxCell>
+    <mxCell id="leg" value="&lt;b&gt;Легенда&lt;/b&gt;" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="vm">
+     <mxGeometry x="20" y="1215" width="1460" height="125" as="geometry" />
+    </mxCell>
+    <mxCell id="lg0" value="клиенты и edge/app (Go)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="12" y="30" width="195" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="lg1" value="данные" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="217" y="30" width="195" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="lg2" value="ML / LLM" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="422" y="30" width="195" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="lg3" value="ops и backup" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="627" y="30" width="195" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="lg4" value="внешнее / уточнить" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="832" y="30" width="195" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="lg5" value="хост" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="1037" y="30" width="195" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="lgt" value="Сплошная стрелка — синхронный вызов; пунктир — опционально или асинхронно (batch, фаза 1.5+). Порты внутри сетей не публикуются: на хосте открыты только 80/443. Версии образов фиксировать по digest при первом развёртывании." style="text;fontSize=10.5;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="leg">
+     <mxGeometry x="12" y="66" width="1430" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="libs" value="&lt;b&gt;Go-библиотеки backend&lt;/b&gt; (рекомендация; актуальность версий не проверялась)&lt;br&gt;&lt;b&gt;HTTP/API:&lt;/b&gt; net/http + chi; oapi-codegen (OpenAPI → Go + TS-клиент)&lt;br&gt;&lt;b&gt;БД и очередь:&lt;/b&gt; pgx v5, sqlc, goose; River (джобы на Postgres)&lt;br&gt;&lt;b&gt;Хранилища:&lt;/b&gt; go-elasticsearch v8, clickhouse-go v2, minio-go v7&lt;br&gt;&lt;b&gt;Auth:&lt;/b&gt; coreos/go-oidc, golang.org/x/oauth2, lestrrat-go/jwx, alexedwards/scs&lt;br&gt;&lt;b&gt;MCP:&lt;/b&gt; modelcontextprotocol/go-sdk (проверить поддержку spec 2026-07-28)&lt;br&gt;&lt;b&gt;ML/LLM:&lt;/b&gt; HTTP-клиент TEI; openai-go (OpenAI-совместимый API → Ollama)&lt;br&gt;&lt;b&gt;Парсинг:&lt;/b&gt; yuin/goldmark, html-to-markdown, golang.org/x/net/html, клиент Tika&lt;br&gt;&lt;b&gt;Граф:&lt;/b&gt; gonum (network.PageRank)&lt;br&gt;&lt;b&gt;Коннекторы:&lt;/b&gt; slack-go/slack (фаза 1.5)&lt;br&gt;&lt;b&gt;Наблюдаемость:&lt;/b&gt; log/slog, prometheus/client_golang; OpenTelemetry (фаза 2)&lt;br&gt;&lt;b&gt;Прочее:&lt;/b&gt; caarlos0/env, go-playground/validator, google/uuid (v7), cenkalti/backoff, x/time/rate&lt;br&gt;&lt;b&gt;Тесты и линтеры:&lt;/b&gt; testify, testcontainers-go, golangci-lint + depguard" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="1850" y="50" width="550" height="262" as="geometry" />
+    </mxCell>
+    <mxCell id="mods" value="&lt;b&gt;ML/LLM-модели&lt;/b&gt; (кандидаты на момент моих знаний: проверить актуальность и лицензию)&lt;br&gt;&lt;b&gt;Эмбеддинги:&lt;/b&gt; BAAI/bge-m3 через TEI на CPU — 1024-мерные, мультиязычные&lt;br&gt;&lt;b&gt;Reranker (опц.):&lt;/b&gt; BAAI/bge-reranker-v2-m3 через TEI&lt;br&gt;&lt;b&gt;LLM (опц.):&lt;/b&gt; instruct ~7–8B в Q4 через Ollama; кандидат Qwen3-8B; выбрать по eval на ваших русскоязычных вопросах&lt;br&gt;&lt;b&gt;STT (фаза 2):&lt;/b&gt; семейство Whisper (faster-whisper), размер по CPU/GPU&lt;br&gt;&lt;b&gt;Критерий выбора:&lt;/b&gt; nDCG@10 на eval-наборе из 100+ ваших вопросов, а не публичные лидерборды" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="1850" y="330" width="550" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="multi" value="&lt;b&gt;Если одной ВМ мало: порядок выноса&lt;/b&gt;" style="fillColor=#ffffff;strokeColor=#666666;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="1850" y="500" width="550" height="640" as="geometry" />
+    </mxCell>
+    <mxCell id="mv1" value="&lt;b&gt;1. VM-ML (GPU)&lt;/b&gt;&lt;br&gt;tei-embed, tei-rerank, LLM (vLLM или Ollama).&lt;br&gt;Выносим первой: самая прожорливая и независимая часть;&lt;br&gt;kb-* ходят к ней по HTTP, меняется только URL в конфиге." style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="multi">
+     <mxGeometry x="10" y="40" width="530" height="85" as="geometry" />
+    </mxCell>
+    <mxCell id="mv2" value="&lt;b&gt;2. VM-Data&lt;/b&gt;&lt;br&gt;Elasticsearch (heap ≤ 50% RAM), ClickHouse, Postgres, MinIO.&lt;br&gt;Далее — кластер ES отдельно от остальных; Postgres с репликой.&lt;br&gt;Сеть: приватная подсеть, наружу ничего." style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="multi">
+     <mxGeometry x="10" y="135" width="530" height="85" as="geometry" />
+    </mxCell>
+    <mxCell id="mv3" value="&lt;b&gt;3. VM-App&lt;/b&gt;&lt;br&gt;Caddy, Keycloak, kb-api, kb-worker.&lt;br&gt;kb-worker масштабируется копиями; kb-api — за балансировщиком;&lt;br&gt;очередь River остаётся в Postgres до стадии C." style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="multi">
+     <mxGeometry x="10" y="230" width="530" height="85" as="geometry" />
+    </mxCell>
+    <mxCell id="mv4" value="&lt;b&gt;4. VM-Ops&lt;/b&gt;&lt;br&gt;Prometheus, Grafana, Loki, Alertmanager, backup-задачи.&lt;br&gt;Отдельно, чтобы мониторинг пережил падение основной ВМ." style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="multi">
+     <mxGeometry x="10" y="325" width="530" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="mvn" value="&lt;b&gt;Как это не ломает код:&lt;/b&gt; те же compose-файлы с разными профилями; адреса сервисов — только в конфиге;&lt;br&gt;между ВМ — TLS (или mTLS), аутентификация сервис-сервис по токенам. Перенос ES/ClickHouse: восстановление из lake командой kb reindex." style="text;fontSize=10.5;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="multi">
+     <mxGeometry x="10" y="405" width="530" height="85" as="geometry" />
+    </mxCell>
+    <mxCell id="multi2" value="&lt;b&gt;Ориентир:&lt;/b&gt; для стадии A хватает одной ВМ (≈27 ГБ с LLM, ≈17 ГБ без).&lt;br&gt;Разбиение — это не архитектурное изменение, а перенос контейнеров." style="text;fontSize=10.5;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="multi">
+     <mxGeometry x="10" y="500" width="530" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="e0" value="HTTPS :443" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="c_web" target="caddy">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e1" value="HTTPS" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.55;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="c_desk" target="caddy">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e2" value="/mcp" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.9;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="c_mcp" target="caddy">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e3" value="SSH (VPN)" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.28;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="c_adm" target="vm">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e4" value=":8081" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.3;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.15;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="caddy" target="api">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e5" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="caddy" target="kc">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e6" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.12;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="pg">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e7" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.55;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="es">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="940" y="266" />
+       <mxPoint x="940" y="348" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e8" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=1;exitY=0.85;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="ch">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="950" y="326" />
+       <mxPoint x="950" y="524" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e9" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="pg">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="960" y="398" />
+       <mxPoint x="960" y="256" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e10" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.3;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.72;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="es">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e11" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.55;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.6;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="ch">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="970" y="500" />
+       <mxPoint x="970" y="557" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e12" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.85;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="s3">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="975" y="567" />
+       <mxPoint x="975" y="661" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e13" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="emb">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="612" y="256" />
+       <mxPoint x="612" y="835" />
+       <mxPoint x="475" y="835" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e14" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="rr">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="626" y="306" />
+       <mxPoint x="626" y="820" />
+       <mxPoint x="765" y="820" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e15" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="emb">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="785" y="850" />
+       <mxPoint x="475" y="850" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e16" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="rr">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="785" y="850" />
+       <mxPoint x="765" y="850" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e17" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="llm">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="785" y="850" />
+       <mxPoint x="1055" y="850" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e18" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="tika">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="785" y="850" />
+       <mxPoint x="1345" y="850" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+    <mxCell id="e19" value="pull: импорт" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0;exitY=0.9;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.2;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="wrk" target="ext">
+     <mxGeometry relative="1" as="geometry">
+      <Array as="points">
+       <mxPoint x="295" y="578" />
+       <mxPoint x="295" y="644" />
+      </Array>
+     </mxGeometry>
+    </mxCell>
+   </root>
+  </mxGraphModel>
+ </diagram>
+ <diagram id="page2" name="2. System design + Go backend">
+  <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2420" pageHeight="1660" math="0" shadow="0">
+   <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="title" value="&lt;b&gt;System design и Go-backend: стадия MVP (1 ВМ, без Kafka) и вектор развития&lt;/b&gt;" style="text;fontSize=16;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="20" y="8" width="1800" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="s1" value="&lt;b&gt;1. Потоки данных: write path (асинхронно) и read path (синхронно)&lt;/b&gt;" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=12;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="20" y="50" width="1290" height="580" as="geometry" />
+    </mxCell>
+    <mxCell id="wt" value="&lt;b&gt;WRITE&lt;/b&gt;: данные → знания. Идемпотентно (ключ doc_id + content_hash), очередь — таблицы River в Postgres, retry и dead-letter из коробки." style="text;fontSize=11;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="10" y="30" width="1270" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="w1" value="&lt;b&gt;1. Источник&lt;/b&gt;&lt;br&gt;импорт папки / zip,&lt;br&gt;Desktop-заметка,&lt;br&gt;загрузка в Web" style="fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="10" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="w2" value="&lt;b&gt;2. Ingest API&lt;/b&gt;&lt;br&gt;POST /api/v1/ingest&lt;br&gt;authn: токен источника&lt;br&gt;или JWT пользователя" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="192" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="w3" value="&lt;b&gt;3. Принять&lt;/b&gt;&lt;br&gt;• blob → MinIO (sha256)&lt;br&gt;• PG-транзакция: реестр&lt;br&gt;  документа + job (outbox)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="374" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="w4" value="&lt;b&gt;4. normalize&lt;/b&gt;&lt;br&gt;Parser по MIME&lt;br&gt;→ Document (envelope)&lt;br&gt;ACL, links, tags, owner" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="556" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="w5" value="&lt;b&gt;5. enrich&lt;/b&gt;&lt;br&gt;Chunker по заголовкам&lt;br&gt;Embedder → TEI&lt;br&gt;дедуп по content_hash" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="738" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="w6" value="&lt;b&gt;6. index&lt;/b&gt;&lt;br&gt;Indexer: upsert в ES&lt;br&gt;(BM25 + vec + ACL);&lt;br&gt;tombstone при удалении" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="920" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="w7" value="&lt;b&gt;7. derive&lt;/b&gt; (jobs)&lt;br&gt;PageRank, граф,&lt;br&gt;конфликты, notify —&lt;br&gt;каждая за флагом" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="1102" y="62" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="lake" value="&lt;b&gt;Журнал lake:&lt;/b&gt; EventStore батчами пишет в ClickHouse raw_events — вместе с MinIO это источник правды для kb reindex" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="192" y="190" width="360" height="56" as="geometry" />
+    </mxCell>
+    <mxCell id="rt" value="&lt;b&gt;READ&lt;/b&gt;: запрос → релевантные документы с учётом прав. Все шаги, кроме rerank, — на каждом запросе." style="text;fontSize=11;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="10" y="262" width="1270" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="r1" value="&lt;b&gt;1. Клиент&lt;/b&gt;&lt;br&gt;Web · MCP · Desktop&lt;br&gt;HTTPS через Caddy" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="10" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="r2" value="&lt;b&gt;2. Authn&lt;/b&gt;&lt;br&gt;JWT: issuer, aud,&lt;br&gt;exp; JWKS из Keycloak&lt;br&gt;(кэш)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="192" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="r3" value="&lt;b&gt;3. AccessResolver&lt;/b&gt;&lt;br&gt;user → global groups →&lt;br&gt;resource groups →&lt;br&gt;space_id[] и acl[] (кэш)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="374" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="r4" value="&lt;b&gt;4. Searcher&lt;/b&gt;&lt;br&gt;BM25 ∥ kNN в ES,&lt;br&gt;оба с filter по&lt;br&gt;tenant + space_id + acl" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="556" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="r5" value="&lt;b&gt;5. Fuse + Signals&lt;/b&gt;&lt;br&gt;RRF в Go →&lt;br&gt;× freshness × authority&lt;br&gt;× quality (0,5…1,5)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="738" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="r6" value="&lt;b&gt;6. Rerank&lt;/b&gt; (опц.)&lt;br&gt;TEI cross-encoder&lt;br&gt;top-50, за флагом" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="920" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="r7" value="&lt;b&gt;7. Post-check&lt;/b&gt;&lt;br&gt;can_read(user, ids) в PG,&lt;br&gt;explain, ответ;&lt;br&gt;лог → ClickHouse" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="1102" y="292" width="162" height="112" as="geometry" />
+    </mxCell>
+    <mxCell id="fb" value="&lt;b&gt;Обратная связь:&lt;/b&gt; like/dislike + причина → PG и ClickHouse → сигнал quality; комментарий «устарело/ошибка» → уведомление владельцу (notify)" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="736" y="420" width="544" height="56" as="geometry" />
+    </mxCell>
+    <mxCell id="per" value="&lt;b&gt;Периодика (River periodic jobs):&lt;/b&gt; PageRank ночью · пересчёт freshness/quality · lag каждого коннектора · conflict scan · notify-digest · retention и tombstone-очистка" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="10" y="492" width="1270" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="s1n" value="Правило: права проверяются дважды — фильтром внутри запроса к индексу (шаг 4) и повторно по Postgres перед выдачей (шаг 7), поэтому устаревший индекс не раскрывает документ." style="text;fontSize=10.5;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s1">
+     <mxGeometry x="10" y="540" width="1270" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="s2" value="&lt;b&gt;2. Go-backend: структура репозитория и слои&lt;/b&gt;" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=12;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="20" y="650" width="1290" height="620" as="geometry" />
+    </mxCell>
+    <mxCell id="tree" value="kb/&#10;├─ cmd/kb/main.go        composition root; режимы api | worker | migrate | reindex | eval&#10;├─ api/openapi.yaml      контракт → oapi-codegen (Go) + openapi-typescript (фронт)&#10;├─ internal/&#10;│  ├─ platform/          config(env) · slog · httpx · pgxpool · metrics · authn(jwx, oidc)&#10;│  ├─ envelope/          типы: Document · Chunk · Principal · Event(v1) — без логики&#10;│  ├─ ingest/            use-cases: Accept → Normalize → Enrich&#10;│  │  ├─ connector/      интерфейс + Registry · files/ · notes/ · (slack/ позже)&#10;│  │  ├─ parser/         интерфейс + Registry · md/ · html/ · txt/ · tika/&#10;│  │  └─ chunker/ embedder/   интерфейс + Factory(config) · tei/&#10;│  ├─ search/            Searcher · Query · RRF · signal/{freshness,authority,quality}&#10;│  ├─ access/            AGDLP: Resolver · Grants · кэш принципалов&#10;│  ├─ docs/ comments/ feedback/ graph/ conflicts/ notify/      (за флагами)&#10;│  ├─ jobs/              River-воркеры: по одному handler на тип события&#10;│  └─ store/             адаптеры: pg/ es/ ch/ s3/ llm/ tei/ queue/&#10;├─ migrations/           goose (PG) · ch/ (ClickHouse) · es/ (шаблоны индексов)&#10;├─ eval/                 вопросы + разметка + harness (kb eval)&#10;└─ deploy/               compose.yaml · Caddyfile · keycloak/realm.json · .env.example" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;fontFamily=Courier New;html=0;" vertex="1" parent="s2">
+     <mxGeometry x="10" y="34" width="640" height="262" as="geometry" />
+    </mxCell>
+    <mxCell id="code" value="type Connector interface {&#10;    Name() string&#10;    Pull(ctx context.Context, cursor string) (items []RawItem, next string, err error)&#10;    Permissions(ctx context.Context, it RawItem) ([]Principal, error)&#10;}&#10;type Parser interface {&#10;    Accepts(mime string) bool&#10;    Parse(ctx context.Context, it RawItem) (envelope.Document, error)&#10;}&#10;type Embedder interface {&#10;    Embed(ctx context.Context, texts []string) ([][]float32, error)&#10;    Model() ModelInfo&#10;}&#10;type Signal interface { Name() string; Score(ctx context.Context, c Candidate) float64 } // 0.5..1.5&#10;type EventBus interface {&#10;    Publish(ctx context.Context, tx Tx, e Event) error&#10;    Handle(typ string, h Handler)&#10;}&#10;&#10;// регистрация: одна строка на реализацию; всё собирается в main.go из конфига&#10;reg := connector.NewRegistry()&#10;reg.Register(&quot;files&quot;, files.New)            // func(cfg) (Connector, error)&#10;reg.Register(&quot;notes&quot;, notes.New)&#10;chain := search.NewChain(cfg.Search.Signals, freshness.New, authority.New, quality.New)" style="fillColor=#ffffff;strokeColor=#666666;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;fontFamily=Courier New;html=0;" vertex="1" parent="s2">
+     <mxGeometry x="10" y="304" width="640" height="306" as="geometry" />
+    </mxCell>
+    <mxCell id="root" value="&lt;b&gt;cmd/kb/main.go — composition root&lt;/b&gt;&lt;br&gt;config → Registry/Factory → явный DI → режим: api | worker | migrate | reindex | eval" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s2">
+     <mxGeometry x="670" y="34" width="610" height="52" as="geometry" />
+    </mxCell>
+    <mxCell id="L1" value="&lt;b&gt;Transport / entrypoints&lt;/b&gt;" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s2">
+     <mxGeometry x="670" y="106" width="610" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="L1_0" value="&lt;b&gt;HTTP API&lt;/b&gt;&lt;br&gt;chi + oapi-codegen" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L1">
+     <mxGeometry x="8" y="24" width="142" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L1_1" value="&lt;b&gt;MCP server&lt;/b&gt;&lt;br&gt;go-sdk" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L1">
+     <mxGeometry x="156" y="24" width="142" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L1_2" value="&lt;b&gt;River workers&lt;/b&gt;&lt;br&gt;jobs/*" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L1">
+     <mxGeometry x="304" y="24" width="142" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L1_3" value="&lt;b&gt;CLI&lt;/b&gt;&lt;br&gt;migrate · reindex · eval" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L1">
+     <mxGeometry x="452" y="24" width="142" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2" value="&lt;b&gt;Use-cases: internal/&amp;lt;feature&amp;gt;&lt;/b&gt;" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s2">
+     <mxGeometry x="670" y="196" width="610" height="104" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_0" value="&lt;b&gt;ingest&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="8.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_1" value="&lt;b&gt;search&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="128.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_2" value="&lt;b&gt;access&lt;/b&gt;&lt;br&gt;AGDLP" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="248.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_3" value="&lt;b&gt;docs&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="368.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_4" value="&lt;b&gt;comments&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="488.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_5" value="&lt;b&gt;feedback&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="8.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_6" value="&lt;b&gt;graph&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="128.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_7" value="&lt;b&gt;conflicts&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="248.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L2_8" value="&lt;b&gt;notify&lt;/b&gt;" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L2">
+     <mxGeometry x="368.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3" value="&lt;b&gt;Ports: интерфейсы (объявляет потребитель)&lt;/b&gt;" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s2">
+     <mxGeometry x="670" y="322" width="610" height="140" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_0" value="&lt;b&gt;Connector&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="8.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_1" value="&lt;b&gt;Parser&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="128.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_2" value="&lt;b&gt;Chunker&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="248.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_3" value="&lt;b&gt;Embedder&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="368.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_4" value="&lt;b&gt;Indexer&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="488.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_5" value="&lt;b&gt;Searcher&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="8.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_6" value="&lt;b&gt;Signal&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="128.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_7" value="&lt;b&gt;BlobStore&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="248.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_8" value="&lt;b&gt;EventBus&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="368.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_9" value="&lt;b&gt;EventStore&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="488.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_10" value="&lt;b&gt;AccessResolver&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="8.0" y="96" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L3_11" value="&lt;b&gt;LLM&lt;/b&gt;" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L3">
+     <mxGeometry x="128.0" y="96" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4" value="&lt;b&gt;Adapters: internal/store/*&lt;/b&gt;" style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s2">
+     <mxGeometry x="670" y="484" width="610" height="104" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_0" value="&lt;b&gt;pg&lt;/b&gt;&lt;br&gt;pgx + sqlc" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="8.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_1" value="&lt;b&gt;es&lt;/b&gt;&lt;br&gt;go-elasticsearch" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="128.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_2" value="&lt;b&gt;ch&lt;/b&gt;&lt;br&gt;clickhouse-go" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="248.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_3" value="&lt;b&gt;s3&lt;/b&gt;&lt;br&gt;minio-go" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="368.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_4" value="&lt;b&gt;tei&lt;/b&gt;&lt;br&gt;HTTP-клиент" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="488.0" y="24" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_5" value="&lt;b&gt;llm&lt;/b&gt;&lt;br&gt;openai-go" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="8.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="L4_6" value="&lt;b&gt;queue&lt;/b&gt;&lt;br&gt;River" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="L4">
+     <mxGeometry x="128.0" y="60" width="114.0" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="dep" value="зависимости только вниз; домен не импортирует pgx / ES / minio" style="text;fontSize=9.5;strokeColor=none;fillColor=none;whiteSpace=wrap;verticalAlign=top;align=center;spacingTop=5;html=1;" vertex="1" parent="s2">
+     <mxGeometry x="670" y="590" width="610" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="s3" value="&lt;b&gt;3. Registry и Factory: как добавляем новый функционал, не трогая ядро&lt;/b&gt;" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=12;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="1330" y="50" width="1070" height="590" as="geometry" />
+    </mxCell>
+    <mxCell id="h1" value="&lt;b&gt;Хочу добавить…&lt;/b&gt;" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="34" width="240" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="h2" value="&lt;b&gt;Что делаю&lt;/b&gt;" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="34" width="520" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="h3" value="&lt;b&gt;Что не трогаю&lt;/b&gt;" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="34" width="274" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="ra0" value="Новый источник (Jira, почта, Confluence)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="66" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb0" value="Пакет connector/&amp;lt;имя&amp;gt; реализует Connector; одна строка в connector.Registry; запись source в PG; маппинг внешних прав в resource groups через Permissions()." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="66" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc0" value="envelope, пайплайн, индекс, ACL-фильтр" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="66" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="ra1" value="Новый формат файла" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="140" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb1" value="Parser для MIME в parser/&amp;lt;имя&amp;gt;, регистрация в parser.Registry; golden-тест на 3–5 реальных файлах." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="140" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc1" value="всё, что после normalize" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="140" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="ra2" value="Новый сигнал ранжирования" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="214" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb2" value="Реализация Signal + вес в конфиге + включение в search.Chain; прогон kb eval до выката. Поле в индексе — через новый шаблон и alias." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="214" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc2" value="Searcher, RRF, остальные сигналы" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="214" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="ra3" value="Новая производная функция (конфликты, граф)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="288" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb3" value="Handler события в jobs/ + флаг feature.&amp;lt;имя&amp;gt; + миграция goose для своих таблиц; вход — события v1, выход — таблицы или поля в индексе." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="288" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc3" value="ingest, normalize, index" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="288" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="ra4" value="Новая модель эмбеддингов" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="362" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb4" value="Embedder через Factory по конфигу; новое поле vec_v2; kb reindex из lake; переключение alias; откат — вернуть alias." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="362" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc4" value="остальной код, старые документы" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="362" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="ra5" value="Новый канал уведомлений" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="436" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb5" value="notify.Channel (email, Slack, webhook) + регистрация в notify.Registry." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="436" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc5" value="событие comment.created и правила подписок" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="436" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="ra6" value="Новый клиент (бот, мобильное приложение)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="10" y="510" width="240" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rb6" value="Работает по тому же OpenAPI с OAuth 2.1 + PKCE; новые endpoint-ы добавляются в контракт обратно-совместимо." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="258" y="510" width="520" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="rc6" value="домен и права" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s3">
+     <mxGeometry x="786" y="510" width="274" height="68" as="geometry" />
+    </mxCell>
+    <mxCell id="s4" value="&lt;b&gt;4. Принципы разработки&lt;/b&gt;" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=12;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="1330" y="660" width="1070" height="610" as="geometry" />
+    </mxCell>
+    <mxCell id="pr0" value="&lt;b&gt;Модульный монолит.&lt;/b&gt; Один бинарник kb, режимы api/worker. Границы — пакеты internal/&amp;lt;feature&amp;gt;; микросервисы только при реальной боли." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="36" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr1" value="&lt;b&gt;Ports &amp; Adapters.&lt;/b&gt; Интерфейс объявляет потребитель. Домен не импортирует pgx, go-elasticsearch, minio-go; адаптеры живут в internal/store/*." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="116" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr2" value="&lt;b&gt;Явный DI.&lt;/b&gt; Всё собирается конструкторами в cmd/kb/main.go; Registry и Factory строятся из конфига. Без глобальных переменных, wire и fx." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="196" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr3" value="&lt;b&gt;Envelope + extra.&lt;/b&gt; Одна схема документа. Новое поле сначала живёт в extra и становится первоклассным после двух потребителей." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="276" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr4" value="&lt;b&gt;Transactional outbox.&lt;/b&gt; Job создаётся в той же PG-транзакции, что и запись (River). Все job идемпотентны: ключ doc_id + content_hash." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="356" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr5" value="&lt;b&gt;ACL везде.&lt;/b&gt; Фильтр в запросе к ES, post-check can_read в PG, автотест матрицы «пользователь × документ» в CI. Deny-правил нет." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="436" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr6" value="&lt;b&gt;Lake — источник правды.&lt;/b&gt; Индекс, граф, PageRank — производные; команда kb reindex пересобирает их из MinIO и ClickHouse." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="10" y="516" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr7" value="&lt;b&gt;Фичи за флагами.&lt;/b&gt; Каждая умная функция включается конфигом и выключается без потери данных; флаг = ключ конфига + строка в PG." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="36" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr8" value="&lt;b&gt;Eval-gate.&lt;/b&gt; Любое изменение ранжирования, чанкинга или модели проходит kb eval (nDCG@10, Recall@50) до выката; результат — в CI." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="116" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr9" value="&lt;b&gt;OpenAPI-first.&lt;/b&gt; Контракт → Go-сервер (oapi-codegen) и TS-клиент. Внутри /api/v1 только обратно-совместимые изменения." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="196" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr10" value="&lt;b&gt;Наблюдаемость с первого дня.&lt;/b&gt; slog в JSON, /metrics, trace id в логах, метрика lag каждого коннектора и глубина очереди River." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="276" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr11" value="&lt;b&gt;Ошибки и таймауты.&lt;/b&gt; Оборачиваем ошибки (%w), ctx везде, таймаут на каждый внешний вызов, retry с backoff только внутри job." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="356" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr12" value="&lt;b&gt;Тесты.&lt;/b&gt; Unit на домен с fake-портами; integration на testcontainers (PG, ES, CH, MinIO); golden-тесты парсеров и чанкера." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="436" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="pr13" value="&lt;b&gt;Границы проверяет линтер.&lt;/b&gt; depguard / go-arch-lint: домен не видит store/*, feature-пакеты не импортируют друг друга — только порты и события." style="fillColor=#ffffff;strokeColor=#666666;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s4">
+     <mxGeometry x="540" y="516" width="520" height="74" as="geometry" />
+    </mxCell>
+    <mxCell id="s5" value="&lt;b&gt;5. К чему приходим: вектор развития (ориентиры, не обещания)&lt;/b&gt;" style="fillColor=#fbfbfb;strokeColor=#9e9e9e;fontSize=12;whiteSpace=wrap;rounded=1;arcSize=4;verticalAlign=top;strokeWidth=1.5;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="1">
+     <mxGeometry x="20" y="1290" width="2380" height="340" as="geometry" />
+    </mxCell>
+    <mxCell id="stA" value="&lt;b&gt;A · Сейчас: PoC/MVP&lt;/b&gt; (1 ВМ, 50–200 документов)&lt;br&gt;• Docker Compose на одной ВМ&lt;br&gt;• очередь = Postgres/River, Kafka нет&lt;br&gt;• по одному узлу ES / ClickHouse / PG / MinIO&lt;br&gt;• TEI на CPU, Keycloak, 2–3 источника&lt;br&gt;• ворота: 0 утечек прав, nDCG@10 не ниже BM25" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s5">
+     <mxGeometry x="10" y="150" width="570" height="120" as="geometry" />
+    </mxCell>
+    <mxCell id="stB" value="&lt;b&gt;B · Команда&lt;/b&gt; (до ~10 тыс. документов)&lt;br&gt;• ML-контейнеры на отдельной ВМ с GPU&lt;br&gt;• desktop-заметки, комментарии, уведомления&lt;br&gt;• PageRank + freshness, аналитика в ClickHouse&lt;br&gt;• SCIM, бэкапы, мониторинг с алертами&lt;br&gt;• Slack и почта как коннекторы" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s5">
+     <mxGeometry x="600" y="130" width="570" height="140" as="geometry" />
+    </mxCell>
+    <mxCell id="stC" value="&lt;b&gt;C · Продукт&lt;/b&gt; (сотни тыс. – млн чанков)&lt;br&gt;• EventBus: River → Kafka/NATS (интерфейс прежний)&lt;br&gt;• worker масштабируется горизонтально&lt;br&gt;• кластер ES, rerank, обученное ранжирование (LTR)&lt;br&gt;• конфликты знаний, выборочный граф&lt;br&gt;• несколько тенантов в одном кластере" style="fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s5">
+     <mxGeometry x="1190" y="110" width="570" height="160" as="geometry" />
+    </mxCell>
+    <mxCell id="stD" value="&lt;b&gt;D · Платформа&lt;/b&gt;&lt;br&gt;• Kubernetes + Helm: self-hosted и SaaS&lt;br&gt;• шардирование ES и ClickHouse по tenant_id&lt;br&gt;• коннекторы вне процесса (gRPC / ingest API)&lt;br&gt;• policy-engine для прав, если AGDLP тесен (напр. OpenFGA)&lt;br&gt;• агентный «глубокий поиск» как отдельный режим" style="fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10.5;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s5">
+     <mxGeometry x="1780" y="90" width="570" height="180" as="geometry" />
+    </mxCell>
+    <mxCell id="inv" value="&lt;b&gt;Не меняется на всех стадиях:&lt;/b&gt; envelope + extra · события v1 · модель AGDLP и фильтр в индексе · швы-интерфейсы (Connector, Embedder, Signal, EventBus / EventStore) · lake (MinIO + ClickHouse) как источник правды" style="fillColor=#ffffff;strokeColor=#666666;fontSize=11;whiteSpace=wrap;rounded=1;arcSize=8;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;spacingRight=6;html=1;" vertex="1" parent="s5">
+     <mxGeometry x="10" y="282" width="2360" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="e0" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w1" target="w2">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e1" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w2" target="w3">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e2" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w3" target="w4">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e3" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w4" target="w5">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e4" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w5" target="w6">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e5" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w6" target="w7">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e6" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="w3" target="lake">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e7" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r1" target="r2">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e8" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r2" target="r3">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e9" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r3" target="r4">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e10" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r4" target="r5">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e11" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r5" target="r6">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e12" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r6" target="r7">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e13" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="r7" target="fb">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e14" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="root" target="L1">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e15" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="L1" target="L2">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e16" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="L2" target="L3">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e17" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="L3" target="L4">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e18" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.85;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="stA" target="stB">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e19" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.85;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="stB" target="stC">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e20" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#444444;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;rounded=0;edgeStyle=none;exitX=1;exitY=0.85;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="stC" target="stD">
+     <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+   </root>
+  </mxGraphModel>
+ </diagram>
+</mxfile>

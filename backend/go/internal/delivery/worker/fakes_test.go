@@ -77,6 +77,12 @@ func (f *fakeJobs) withIndexJob() *fakeJobs {
 	return f
 }
 
+// withConvertJob кладёт задание стадии convert — её ставит загрузка документа.
+func (f *fakeJobs) withConvertJob() *fakeJobs {
+	f.job = &queuedJob{id: uuid.New(), stage: domain.StageConvert, status: domain.JobStatusQueued}
+	return f
+}
+
 func (f *fakeJobs) now() time.Time { return f.base.Add(f.offset) }
 
 // available сообщает, может ли задание быть выдано. Сроки повторов считаются по
@@ -144,6 +150,17 @@ func (f *fakeJobs) FinishIndex(
 	return nil
 }
 
+// FinishConvert завершает задание convert и переводит его на стадию index —
+// повторяет advance_to_index из ТЗ 3.6.
+func (f *fakeJobs) FinishConvert(
+	_ context.Context, _ ports.Queryer, _, _ string, _ domain.ConversionResult,
+) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.job.status = domain.JobStatusSucceeded
+	return nil
+}
+
 // Fail повторяет политику репозитория: постоянная ошибка завершает задание,
 // временная возвращает его в очередь с паузой, пока не исчерпан потолок попыток.
 func (f *fakeJobs) Fail(
@@ -202,7 +219,7 @@ func (f *fakeJobs) heartbeatsTaken() int {
 	return f.heartbeatSeen
 }
 
-// fakeStage — стадия индексации под управлением теста.
+// fakeStage — стадии convert и index под управлением теста.
 type fakeStage struct {
 	// err — ошибка, которую вернёт стадия.
 	err error
@@ -210,10 +227,14 @@ type fakeStage struct {
 	// остановка процесса и утрата lease на середине задания.
 	block bool
 
-	calls   int
-	started chan struct{}
-	lease   domain.JobLease
-	seenErr error
+	calls        int
+	convertCalls int
+	started      chan struct{}
+	lease        domain.JobLease
+	seenErr      error
+	// jobs — очередь, в которую стадия convert пишет FinishConvert. nil у
+	// большинства тестов: там важна сама обработка, а не её итог.
+	jobs *fakeJobs
 }
 
 func newFakeStage() *fakeStage {
@@ -222,6 +243,34 @@ func newFakeStage() *fakeStage {
 
 func (s *fakeStage) Index(ctx context.Context, lease domain.JobLease) error {
 	s.calls++
+	return s.run(ctx, lease)
+}
+
+// Convert — стадия разбора. Считается отдельно от Index: тест должен видеть,
+// какую именно стадию цикл выполнил, иначе обе проверки проходили бы на
+// одном и том же вызове.
+// Convert — стадия разбора. Завершает задание через FinishConvert, как это
+// делает настоящий конвертер: тест проверяет, что стадия convert дошла до
+// перевода задания, а не просто отработала вхолостую.
+func (s *fakeStage) Convert(ctx context.Context, lease domain.JobLease) error {
+	s.convertCalls++
+	// Lease записывается до завершения задания: тест должен видеть, какую
+	// стадию цикл отдал, даже когда подделка отвечает в очередь сама.
+	s.lease = lease
+	if s.jobs != nil {
+		if s.err != nil {
+			return s.err
+		}
+		versionID, _ := lease.VersionIDValue()
+		return s.jobs.FinishConvert(ctx, fakeQueryer{}, lease.JobID.String(), lease.LeaseToken,
+			domain.ConversionResult{
+				VersionID: versionID.String(), ParsedKey: "parsed.json", BlockCount: 1,
+			})
+	}
+	return s.run(ctx, lease)
+}
+
+func (s *fakeStage) run(ctx context.Context, lease domain.JobLease) error {
 	s.lease = lease
 	select {
 	case s.started <- struct{}{}:

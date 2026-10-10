@@ -241,6 +241,13 @@ func (f *fakeJobs) FinishIndex(
 	return nil
 }
 
+// FinishConvert стадии convert: сценарий документов её не вызывает.
+func (f *fakeJobs) FinishConvert(
+	context.Context, ports.Queryer, string, string, domain.ConversionResult,
+) error {
+	return nil
+}
+
 func (f *fakeJobs) Fail(
 	context.Context, ports.Queryer, string, string, string, string, bool,
 ) error {

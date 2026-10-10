@@ -66,6 +66,13 @@ type stubDocuments struct {
 	previous  string
 	activate  domain.ActivateParams
 	activated bool
+
+	// convert — версия, которую читает стадия convert вместе с оригиналом.
+	convert    domain.ConvertVersion
+	convertErr error
+	// versionReads считает чтения версии: стадия convert обязана читать её
+	// ровно один раз, повторное чтение означало бы двойной разбор файла.
+	versionReads int
 }
 
 func (s *stubDocuments) GetAllowedActiveVersions(
@@ -81,6 +88,17 @@ func (s *stubDocuments) LoadParsed(
 		return domain.ParsedDocument{}, s.loadErr
 	}
 	return s.parsed, nil
+}
+
+// LoadVersion отдаёт версию стадии convert.
+func (s *stubDocuments) LoadVersion(
+	context.Context, ports.Queryer, ports.FileStorage, string, string,
+) (domain.ConvertVersion, error) {
+	s.versionReads++
+	if s.convertErr != nil {
+		return domain.ConvertVersion{}, s.convertErr
+	}
+	return s.convert, nil
 }
 
 func (s *stubDocuments) VersionSources(
@@ -207,6 +225,43 @@ type stubJobs struct {
 	finishErr   error
 	cleanupErr  error
 	finishCalls int
+
+	// convertErr — ошибка перевода задания на стадию index.
+	convertErr   error
+	convertCalls int
+	leaseToken   string
+	parsedKey    string
+	blockCount   int
+	// indexEnqueues считает успешные переводы задания на стадию index.
+	indexEnqueues int
+	// leaseSpent — lease израсходован: повторный перевод с тем же токеном
+	// отвергается, как это делает lockRunningJob в postgres.
+	leaseSpent bool
+}
+
+// FinishConvert переводит задание на стадию index.
+//
+// Повторно израсходованный lease отвергается — это повторяет
+// lockRunningJob в postgres и есть настоящий механизм идемпотентности:
+// перевод задания делается UPDATE-ом той же строки jobs, второго задания
+// появиться не может в принципе. Подделка моделирует ровно это, чтобы
+// тест проверял поведение, а не счётчик вызовов.
+func (s *stubJobs) FinishConvert(
+	_ context.Context, _ ports.Queryer, _, leaseToken string, res domain.ConversionResult,
+) error {
+	s.convertCalls++
+	s.parsedKey = res.ParsedKey
+	s.blockCount = res.BlockCount
+	s.leaseToken = leaseToken
+	if s.convertErr != nil {
+		return s.convertErr
+	}
+	if s.leaseSpent {
+		return domain.JobLeaseLost("Lease задания утрачен")
+	}
+	s.leaseSpent = true
+	s.indexEnqueues++
+	return nil
 }
 
 func (s *stubJobs) Claim(

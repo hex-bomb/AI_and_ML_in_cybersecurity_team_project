@@ -71,8 +71,8 @@ func TestWorkerClaimsIndexStageWithWorkerID(t *testing.T) {
 		t.Errorf("запрошены стадии %v вместо %v", jobs.stages, domain.GoStages())
 	}
 	for _, got := range jobs.stages {
-		if got != domain.StageIndex {
-			t.Errorf("в списке стадий есть чужая %q: её обслуживает Python-воркер", got)
+		if got != domain.StageIndex && got != domain.StageConvert {
+			t.Errorf("в списке стадий есть чужая %q: её обслуживает другой воркер", got)
 		}
 	}
 }
@@ -307,19 +307,76 @@ func TestWorkerStopsOnContextCancel(t *testing.T) {
 	}
 }
 
-// TestWorkerRejectsStageItDoesNotOwn — чужая стадия не исполняется как index.
-// Через очередь это недостижимо (Claim фильтрует), но если фильтр сломается,
+// TestWorkerRejectsStageItDoesNotOwn — чужая стадия не исполняется ни как
+// index, ни как convert. Через очередь это недостижимо (Claim фильтрует по
+// GoStages), но если фильтр сломается, задание молча ушло бы в пустую
+// обработку и потерялось.
 func TestWorkerRejectsStageItDoesNotOwn(t *testing.T) {
 	jobs := newFakeJobs()
-	jobs.job = &queuedJob{id: testTenantID, stage: domain.StageConvert, status: domain.JobStatusQueued}
+	jobs.job = &queuedJob{id: testTenantID, stage: domain.StageDelete, status: domain.JobStatusQueued}
 	stage := newFakeStage()
 
 	newTestWorker(jobs, stage, &fakeClock{stopAfter: 1}).Run(context.Background())
 
 	if stage.calls != 0 {
-		t.Error("стадия convert выполнена Go-воркером: её обслуживает Python")
+		t.Error("стадия delete выполнена Go-воркером: её обслуживает не он")
 	}
 	if jobs.snapshot().retryable {
 		t.Error("отказ по чужой стадии не должен повторяться")
+	}
+}
+
+// TestWorkerRunsConvertStage — стадия convert обслуживается Go-воркером:
+// загрузка документа ставит именно её, и без неё версия навсегда осталась бы
+// в состоянии uploaded без parsed.json.
+func TestWorkerRunsConvertStage(t *testing.T) {
+	jobs := newFakeJobs().withConvertJob()
+	stage := newFakeStage()
+	stage.jobs = jobs
+
+	newTestWorker(jobs, stage, &fakeClock{stopAfter: 1}).Run(context.Background())
+
+	if stage.lease.Stage != domain.StageConvert {
+		t.Errorf("обработана стадия %q вместо convert", stage.lease.Stage)
+	}
+	if jobs.snapshot().status != domain.JobStatusSucceeded {
+		t.Errorf("статус задания %q, ожидался succeeded после FinishConvert",
+			jobs.snapshot().status)
+	}
+}
+
+// TestWorkerClaimsConvertAndIndexStages — Claim забирает обе обслуживаемые
+// стадии: convert ставит upload, index ставит convert.
+func TestWorkerClaimsConvertAndIndexStages(t *testing.T) {
+	jobs := newFakeJobs()
+	jobs.job = nil
+	stage := newFakeStage()
+
+	newTestWorker(jobs, stage, &fakeClock{stopAfter: 1}).Run(context.Background())
+
+	if !slices.Equal(jobs.stages, []string{domain.StageConvert, domain.StageIndex}) {
+		t.Errorf("запрошены стадии %v вместо [convert index]", jobs.stages)
+	}
+}
+
+// TestWorkerFailsConvertJobOnParseError — ошибка стадии convert доходит до
+// очереди с её кодом: повтор после временной ошибки возможен, а постоянная
+// завершает задание и переводит версию в failed.
+func TestWorkerFailsConvertJobOnParseError(t *testing.T) {
+	jobs := newFakeJobs().withConvertJob()
+	stage := newFakeStage()
+	stage.err = domain.UnsupportedFormat("Формат файла не поддерживается")
+
+	newTestWorker(jobs, stage, &fakeClock{stopAfter: 1}).Run(context.Background())
+
+	got := jobs.snapshot()
+	if got.failCode != domain.CodeUnsupportedFormat {
+		t.Errorf("код ошибки %q вместо %s", got.failCode, domain.CodeUnsupportedFormat)
+	}
+	if got.retryable {
+		t.Error("UNSUPPORTED_FORMAT не должен повторяться")
+	}
+	if got.status != domain.JobStatusFailed {
+		t.Errorf("статус задания %q, ожидался failed", got.status)
 	}
 }

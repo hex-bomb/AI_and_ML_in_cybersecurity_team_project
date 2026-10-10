@@ -98,15 +98,18 @@ func TestClaimReturnsNilWhenQueueEmpty(t *testing.T) {
 
 // TestClaimSkipsStageNotRequested — порт test_jobs.py:200.
 // Критично для совместной работы двух воркеров: Go-воркер обслуживает
+// стадии convert и index, а delete и cleanup остаются за Python-воркером.
+// Чужую стадию Claim обязан пропустить, иначе задание уборки забрал бы
+// Go-воркер и убрал версию из-под работающего с ней поиска.
 func TestClaimSkipsStageNotRequested(t *testing.T) {
 	requireDB(t)
 	ctx := testContext(t)
-	seedChain(t, ctx, seedOptions{})
+	seedChain(t, ctx, seedOptions{stage: domain.StageDelete})
 	repo := newTestJobs()
 
 	lease := claimInTx(t, ctx, repo, "worker-1", domain.GoStages())
 	if lease != nil {
-		t.Fatalf("Go-воркер забрал задание стадии %s, а должен брать только index", lease.Stage)
+		t.Fatalf("Go-воркер забрал задание стадии %s, а её обслуживает другой воркер", lease.Stage)
 	}
 }
 
@@ -557,8 +560,16 @@ func TestEnqueueCleanupIsNotClaimedByGoWorker(t *testing.T) {
 		t.Fatalf("EnqueueCleanup: %v", err)
 	}
 
-	if lease := claimInTx(t, ctx, repo, "go-worker", domain.GoStages()); lease != nil {
-		t.Fatalf("Go-воркер забрал задачу уборки: %+v", lease)
+	// Задание загрузки (стадия convert) тоже встанет в очередь, поэтому
+	// проверяется именно та задача, которую Claim обязан пропустить: уборка.
+	for i := 0; i < 3; i++ {
+		lease := claimInTx(t, ctx, repo, "go-worker", domain.GoStages())
+		if lease == nil {
+			break
+		}
+		if lease.Stage == domain.StageCleanup {
+			t.Fatalf("Go-воркер забрал задачу уборки: %+v", lease)
+		}
 	}
 }
 

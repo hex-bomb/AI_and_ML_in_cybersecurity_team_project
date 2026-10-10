@@ -15,7 +15,10 @@ import (
 const MaxFileBytes = 20 * 1024 * 1024
 
 // SupportedFormats lists the extensions accepted on intake.
-var SupportedFormats = []string{".md", ".docx", ".pdf"}
+//
+// .txt добавлен вместе с разбором обычного текста: принимать файл, который
+// потом нечем разобрать, значит завести его в очередь и повесить задание.
+var SupportedFormats = []string{".md", ".txt", ".docx", ".pdf"}
 
 // IsSupported reports whether the filename has an accepted extension.
 func IsSupported(filename string) bool {
@@ -60,11 +63,11 @@ func ValidateFormat(ctx context.Context, filename string, content []byte) (strin
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	suffix := strings.ToLower(path.Ext(filepathToSlash(filename)))
+	suffix := extensionOf(filename)
 	switch suffix {
-	case ".md", ".docx", ".pdf":
+	case ".md", ".txt", ".docx", ".pdf":
 	default:
-		return "", domain.UnsupportedFormat("Поддерживаются MD, DOCX и текстовые PDF")
+		return "", domain.UnsupportedFormat("Поддерживаются MD, TXT, DOCX и текстовые PDF")
 	}
 	switch suffix {
 	case ".pdf":
@@ -75,12 +78,24 @@ func ValidateFormat(ctx context.Context, filename string, content []byte) (strin
 		if !bytes.HasPrefix(content, []byte("PK")) {
 			return "", domain.InvalidMetadata("Файл не содержит корректный DOCX")
 		}
-	case ".md":
+	case ".md", ".txt":
+		// Оба формата текстовые и без собственной сигнатуры: их проверяет
+		// единственное, что можно, — кодировка. Байты не-UTF-8 разобрались
+		// бы в мусор и молча ушли бы в индекс.
 		if !utf8.Valid(content) {
-			return "", domain.InvalidMetadata("Markdown должен использовать UTF-8")
+			return "", domain.InvalidMetadata("Текстовый файл должен использовать UTF-8")
 		}
 	}
 	return suffix, nil
+}
+
+// extensionOf возвращает расширение в нижнем регистре.
+//
+// Разделители пути нормализуются: имя файла приходит из заголовка загрузки,
+// где на Windows оно может содержать обратный слэш, и «C:\docs\a.MD» обязан
+// распознаваться так же, как «a.md».
+func extensionOf(filename string) string {
+	return strings.ToLower(path.Ext(filepathToSlash(filename)))
 }
 
 func filepathToSlash(filename string) string {
