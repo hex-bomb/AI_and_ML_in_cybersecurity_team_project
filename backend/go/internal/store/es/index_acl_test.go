@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Тесты индекса прав §6. Кластера не требуют: проверяют форму _source и mapping'а,
@@ -142,7 +142,7 @@ func TestПустыеПраваСериализуютсяПустымМасси�
 	cases := map[string]domain.DocumentRights{
 		"нулевые права":      {},
 		"контейнер":          domain.ContainerRights("space-hr"),
-		"контейнер с пустым": domain.DocumentRights{SpaceID: "space-hr", ACL: []string{}},
+		"контейнер с пустым": {SpaceID: "space-hr", ACL: []string{}},
 		"личная заметка":     domain.PersonalNoteRights("anna"),
 	}
 	for name, rights := range cases {
@@ -376,8 +376,16 @@ func TestДобавлениеПолейПравНеМеняетИмяИндек�
 	if !strings.HasPrefix(cfg.IndexName(), domain.IndexPrefix+"-") {
 		t.Errorf("имя индекса %q не построено от %s", cfg.IndexName(), domain.IndexPrefix)
 	}
-	if cfg.ProfileID() != cfg.ProfileID() {
-		t.Fatal("ProfileID не детерминирован")
+	// ProfileID обязан быть детерминированным: два независимо собранных
+	// конфига одного векторного профиля дают одно имя, иначе алиасы индексов
+	// расходятся при каждом перезапуске.
+	if got, want := testConfig(384).ProfileID(), cfg.ProfileID(); got != want {
+		t.Errorf("ProfileID не детерминирован: %q против %q", got, want)
+	}
+	// И он обязан зависеть от векторного профиля, иначе смена модели
+	// переиспользовала бы индекс, построенный для другой размерности.
+	if testConfig(768).ProfileID() == cfg.ProfileID() {
+		t.Error("ProfileID не учитывает размерность вектора")
 	}
 
 	// Поля прав присутствуют в теле индекса, и оно остаётся собираемым.
