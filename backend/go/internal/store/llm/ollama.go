@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/ports"
 )
 

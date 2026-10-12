@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // maxMultipartMemory — буфер multipart-парсера в памяти до сброса на диск.

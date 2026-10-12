@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // systemPrompt — инструкция модели (ТЗ 7.5 п.4); формат ответа задаёт поле format.

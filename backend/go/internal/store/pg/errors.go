@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // SQLSTATE-классы: важен класс (повтор имеет смысл или нет), а не каждый код.

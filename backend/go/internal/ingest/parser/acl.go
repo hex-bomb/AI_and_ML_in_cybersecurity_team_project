@@ -3,7 +3,7 @@ package documents
 import (
 	"fmt"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Права в карте metadata конверта.

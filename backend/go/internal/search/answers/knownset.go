@@ -3,7 +3,7 @@ package answers
 import (
 	"strings"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // knownSet keeps fragments in the order the model saw them; the position

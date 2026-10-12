@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/jobs/worker"
 	"github.com/kbsearch/kb/internal/ports"
 )

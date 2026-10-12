@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/ingest/parser"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	documents "github.com/kbsearch/kb/internal/ingest/parser"
 	"github.com/kbsearch/kb/internal/ports"
 )
 

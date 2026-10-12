@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/search/service"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	search "github.com/kbsearch/kb/internal/search/service"
 )
 
 // Кейсы перенесены из backend/tests/test_search.py:131-183 один в один.

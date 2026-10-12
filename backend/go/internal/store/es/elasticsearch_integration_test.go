@@ -28,8 +28,8 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/google/uuid"
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/search/service"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	search "github.com/kbsearch/kb/internal/search/service"
 )
 
 // decodeJSON — тонкая обёртка над json.Decoder для тестовых ответов.

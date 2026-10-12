@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // RateLimit — минимальный per-IP fixed window для дорогих POST

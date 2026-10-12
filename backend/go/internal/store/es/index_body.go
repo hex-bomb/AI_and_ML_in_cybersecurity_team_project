@@ -5,7 +5,7 @@ package elasticsearch
 import (
 	"encoding/json"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // russianAnalyzer — встроенный русский анализатор со стеммингом (своего словаря не ведём).

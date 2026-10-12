@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // InheritRights помечает документ, у которого НЕТ собственного ACL на сервере.

@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Подделки внизу существуют ради одной проверки формы: пока интерфейс жив, он
@@ -232,7 +232,7 @@ func TestEventSeamsDoNotNameVendors(t *testing.T) {
 // kafkaMessage и badBus существуют только для проверки самого запрета: пока
 // нарушение ловится, тест выше что-то охраняет; если перестанет — оба теста
 // станут зелёными на любом интерфейсе.
-type kafkaMessage struct{ topic string }
+type kafkaMessage struct{}
 
 type badBus interface {
 	Publish(ctx context.Context, message kafkaMessage) error

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/jobs/indexing"
 	"github.com/kbsearch/kb/internal/jobs/worker"
 )

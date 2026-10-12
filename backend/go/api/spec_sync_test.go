@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kbsearch/kb/api"
+	contracts "github.com/kbsearch/kb/api"
 )
 
 // TestEmbeddedSpecMatchesFile ловит рассинхрон встроенной копии спеки.

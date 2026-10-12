@@ -58,9 +58,9 @@ func main() {
 func run() int {
 	fs := flag.NewFlagSet("kbeval", flag.ContinueOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "kbeval — гейт §9: гибрид не хуже BM25-базы.\n\n")
-		fmt.Fprintf(fs.Output(), "Использование:\n  kbeval [флаги]\n\n")
-		fmt.Fprintf(fs.Output(),
+		_, _ = fmt.Fprintf(fs.Output(), "kbeval — гейт §9: гибрид не хуже BM25-базы.\n\n")
+		_, _ = fmt.Fprintf(fs.Output(), "Использование:\n  kbeval [флаги]\n\n")
+		_, _ = fmt.Fprintf(fs.Output(),
 			"Прогон без сети: kbeval -backend=fixture -api <файл выдач.json> -mode=compare\n"+
 				"Прогон на стенде:  kbeval -api http://localhost:8080 -kb-id <uuid> -mode=compare\n\n")
 		fs.PrintDefaults()
@@ -84,31 +84,31 @@ func run() int {
 		return exitError
 	}
 	if fs.NArg() > 0 {
-		fmt.Fprintf(os.Stderr, "kbeval: лишние аргументы %v\n", fs.Args())
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: лишние аргументы %v\n", fs.Args())
 		return exitError
 	}
 	if *k <= 0 {
-		fmt.Fprintf(os.Stderr, "kbeval: -k должен быть положительным, задано %d\n", *k)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: -k должен быть положительным, задано %d\n", *k)
 		return exitError
 	}
 	if *topK < 0 {
-		fmt.Fprintf(os.Stderr, "kbeval: -top-k не может быть отрицательным, задано %d\n", *topK)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: -top-k не может быть отрицательным, задано %d\n", *topK)
 		return exitError
 	}
 	if err := validateBackend(*backend); err != nil {
-		fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
 		return exitError
 	}
 
 	cases, err := evaluation.LoadGoldenFile(*goldenPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
 		return exitError
 	}
 
 	modes, err := modesFor(*runMode)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
 		return exitError
 	}
 	cfg := evaluation.RunnerConfig{K: *k, Modes: modes, RecallK: *topK}
@@ -123,28 +123,28 @@ func run() int {
 		token:   *token,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
 		return exitError
 	}
 
 	result, runErr := evaluation.Run(ctx, cases, search, cfg)
 	if runErr != nil {
-		fmt.Fprintf(os.Stderr, "kbeval: %v\n", runErr)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", runErr)
 		return exitError
 	}
 
-	fmt.Fprint(os.Stdout, humanSummary(result))
+	_, _ = fmt.Fprint(os.Stdout, humanSummary(result))
 	if *outPath != "" {
 		if err := writeReport(*outPath, result); err != nil {
-			fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
 			return exitError
 		}
-		fmt.Fprintf(os.Stdout, "отчёт: %s\n", *outPath)
+		_, _ = fmt.Fprintf(os.Stdout, "отчёт: %s\n", *outPath)
 	}
 	// Err() здесь единственный источник истины: он же формирует текст,
 	// который человек читает в логе CI.
 	if err := result.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "kbeval: %v\n", err)
 		return exitGate
 	}
 	return exitOK

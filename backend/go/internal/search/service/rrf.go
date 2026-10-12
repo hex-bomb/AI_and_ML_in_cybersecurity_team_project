@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // RRFK is the RRF rank constant.

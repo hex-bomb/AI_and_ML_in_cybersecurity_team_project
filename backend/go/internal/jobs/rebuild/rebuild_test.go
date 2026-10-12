@@ -951,7 +951,3 @@ func sortedAscending(values []string) bool {
 	}
 	return true
 }
-
-func slices_Clone[T any](in []T) []T {
-	return append([]T(nil), in...)
-}

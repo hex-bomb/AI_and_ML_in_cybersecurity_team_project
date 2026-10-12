@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Файл строит фильтр прав §6 — это единственное место адаптера, где решается,

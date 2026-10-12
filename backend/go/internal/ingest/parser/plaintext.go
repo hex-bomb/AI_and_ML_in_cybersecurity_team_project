@@ -1,7 +1,7 @@
 package documents
 
 import (
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // parsePlainText раскладывает .txt на абзацы по пустым строкам.

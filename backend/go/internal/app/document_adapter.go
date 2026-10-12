@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/internal/api/http"
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/ingest/parser"
+	httpapi "github.com/kbsearch/kb/internal/api/http"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	documents "github.com/kbsearch/kb/internal/ingest/parser"
 )
 
 // documentAdapter переводит DTO транспорта в типы сценария документов.

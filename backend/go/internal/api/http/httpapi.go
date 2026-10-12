@@ -13,8 +13,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/api"
-	"github.com/kbsearch/kb/internal/envelope"
+	contracts "github.com/kbsearch/kb/api"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/platform/config"
 )
 

@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Протокол /api/chat Ollama (терять поля нельзя — отключатся инструмент или схема).

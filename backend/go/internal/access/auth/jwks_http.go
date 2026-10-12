@@ -41,7 +41,9 @@ func (j *HTTPJWKS) Fetch(ctx context.Context) (map[string]*rsa.PublicKey, error)
 	if err != nil {
 		return nil, fmt.Errorf("запрос JWKS: %w", err)
 	}
-	defer resp.Body.Close()
+	// Ошибку закрытия тела игнорировать можно только после того, как тело
+	// прочитано: закрытие не влияет ни на статус, ни на разобранные ключи.
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("JWKS вернул статус %d", resp.StatusCode)

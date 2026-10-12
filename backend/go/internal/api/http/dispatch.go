@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/kbsearch/kb/api"
-	"github.com/kbsearch/kb/internal/envelope"
+	contracts "github.com/kbsearch/kb/api"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Лимиты длин на входе транспорта (длиннее — 422, до сценариев не доходит).

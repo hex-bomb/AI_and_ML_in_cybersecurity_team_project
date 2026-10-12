@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/ingest/parser"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	documents "github.com/kbsearch/kb/internal/ingest/parser"
 )
 
 // Виды блоков из ТЗ 3.2. Список закрытый: конвертер не придумывает новых,

@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/ingest/parser"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	documents "github.com/kbsearch/kb/internal/ingest/parser"
 )
 
 // Права конверта на пути ingest → index (§4, §6).

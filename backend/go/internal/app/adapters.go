@@ -5,13 +5,13 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/internal/api/http"
+	httpapi "github.com/kbsearch/kb/internal/api/http"
 	"github.com/kbsearch/kb/internal/docs/kb"
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/ports"
 	"github.com/kbsearch/kb/internal/search/answers"
-	"github.com/kbsearch/kb/internal/search/service"
-	"github.com/kbsearch/kb/internal/store/pg"
+	search "github.com/kbsearch/kb/internal/search/service"
+	postgres "github.com/kbsearch/kb/internal/store/pg"
 )
 
 // Адаптеры переводят DTO транспорта в типы сценариев (application не может

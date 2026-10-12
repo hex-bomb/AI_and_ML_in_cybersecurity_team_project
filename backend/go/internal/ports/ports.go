@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // FileStorage stores originals and parsed documents.

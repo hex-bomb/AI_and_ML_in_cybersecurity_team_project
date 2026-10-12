@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/ingest/parser"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	documents "github.com/kbsearch/kb/internal/ingest/parser"
 )
 
 // TestConvertReturnsErrorInsteadOfEmptyDocument — конвертер больше не

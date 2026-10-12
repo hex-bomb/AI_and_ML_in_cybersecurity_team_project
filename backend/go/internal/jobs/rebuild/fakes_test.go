@@ -458,17 +458,6 @@ func (i *recordingIndex) документы() []string {
 	return out
 }
 
-// чанки документа — записанные чанки в порядке записи.
-func (i *recordingIndex) чанки(documentID string) []domain.Chunk {
-	var out []domain.Chunk
-	for _, chunk := range i.written {
-		if chunk.DocumentID == documentID {
-			out = append(out, chunk)
-		}
-	}
-	return out
-}
-
 // подписи чанков — сравнимая форма записанного индекса.
 //
 // Подпись включает chunk_id: именно он ключ _id в Elasticsearch, и две записи с

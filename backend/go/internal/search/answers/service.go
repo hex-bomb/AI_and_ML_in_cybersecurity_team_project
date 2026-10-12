@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/kbsearch/kb/internal/docs/settings"
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/ports"
-	"github.com/kbsearch/kb/internal/search/service"
+	search "github.com/kbsearch/kb/internal/search/service"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Тесты идут на httptest.Server: протокол /api/chat проверяется целиком,

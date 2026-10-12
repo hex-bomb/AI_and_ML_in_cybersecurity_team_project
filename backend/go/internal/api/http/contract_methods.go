@@ -5,7 +5,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/kbsearch/kb/api"
+	contracts "github.com/kbsearch/kb/api"
 )
 
 // Мост контракта к сценариям. Параметры генератора игнорируются: тело и query

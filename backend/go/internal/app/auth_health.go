@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/kbsearch/kb/internal/access/auth"
-	"github.com/kbsearch/kb/internal/api/http"
-	"github.com/kbsearch/kb/internal/envelope"
+	httpapi "github.com/kbsearch/kb/internal/api/http"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/platform/config"
 	"github.com/kbsearch/kb/internal/ports"
 )

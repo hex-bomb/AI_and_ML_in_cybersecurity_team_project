@@ -404,7 +404,7 @@ func TestTruncateKeepsTextReadable(t *testing.T) {
 	if !strings.HasSuffix(got, "…") {
 		t.Fatalf("длинный текст не обрезан: %q", got)
 	}
-	if !strings.HasPrefix(long[:len(long)], strings.TrimSuffix(got, "…")) {
+	if !strings.HasPrefix(long[:], strings.TrimSuffix(got, "…")) {
 		t.Fatalf("обрезанный текст не является префиксом исходного: %q", got)
 	}
 }

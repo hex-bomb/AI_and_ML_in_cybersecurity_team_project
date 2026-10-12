@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Разбор DOCX без новых зависимостей: DOCX — это zip, а текст лежит в

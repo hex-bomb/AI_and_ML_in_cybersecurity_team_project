@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/elastic/go-elasticsearch/v9"
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Тесты этого файла не требуют кластера: они проверяют ТЕЛО запроса, которое

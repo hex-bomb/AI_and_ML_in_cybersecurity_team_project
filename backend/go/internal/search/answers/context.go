@@ -2,7 +2,7 @@ package answers
 
 import (
 	"github.com/kbsearch/kb/internal/docs/settings"
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // buildContext keeps whole hits that fit the answer context budget, in

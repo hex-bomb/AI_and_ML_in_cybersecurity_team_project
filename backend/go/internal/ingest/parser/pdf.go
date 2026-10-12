@@ -5,7 +5,7 @@ import (
 
 	"github.com/ledongthuc/pdf"
 
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Разбор PDF через ledongthuc/pdf.

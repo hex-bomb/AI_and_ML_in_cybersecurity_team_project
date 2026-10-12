@@ -9,13 +9,13 @@ import (
 
 	"github.com/kbsearch/kb/internal/app"
 	"github.com/kbsearch/kb/internal/docs/settings"
-	"github.com/kbsearch/kb/internal/envelope"
+	domain "github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/jobs/indexing"
 	"github.com/kbsearch/kb/internal/jobs/worker"
 	"github.com/kbsearch/kb/internal/platform/config"
 	"github.com/kbsearch/kb/internal/ports"
-	"github.com/kbsearch/kb/internal/store/pg"
-	"github.com/kbsearch/kb/internal/store/s3"
+	postgres "github.com/kbsearch/kb/internal/store/pg"
+	storage "github.com/kbsearch/kb/internal/store/s3"
 )
 
 func main() {

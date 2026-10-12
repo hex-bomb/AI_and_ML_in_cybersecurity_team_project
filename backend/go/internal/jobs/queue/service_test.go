@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/internal/envelope"
-	"github.com/kbsearch/kb/internal/jobs/queue"
+	domain "github.com/kbsearch/kb/internal/envelope"
+	jobs "github.com/kbsearch/kb/internal/jobs/queue"
 	"github.com/kbsearch/kb/internal/ports"
 )
 

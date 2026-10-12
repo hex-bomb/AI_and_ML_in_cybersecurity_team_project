@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kbsearch/kb/api"
-	"github.com/kbsearch/kb/internal/envelope"
+	contracts "github.com/kbsearch/kb/api"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // TestStrictJSONRejectsUnknownFields — ТЗ требует отклонять неизвестные поля

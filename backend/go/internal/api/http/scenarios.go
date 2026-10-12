@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/kb/api"
-	"github.com/kbsearch/kb/internal/envelope"
+	contracts "github.com/kbsearch/kb/api"
+	domain "github.com/kbsearch/kb/internal/envelope"
 )
 
 // Сценарии — порты application для транспорта. DTO не совпадают с типами
