@@ -26,6 +26,10 @@ type errorSpec struct {
 var errorRegistry = map[string]errorSpec{
 	"INTERNAL_ERROR": {status: http.StatusInternalServerError, message: "Внутренняя ошибка"},
 	"NOT_FOUND":      {status: http.StatusNotFound, message: "Ресурс не найден"},
+	// Текст ответа не различает «токена нет», «токен невалиден» и «токен
+	// отозван»: различие дало бы переборщику оракул о том, какие токены
+	// вообще бывают. Подробности — только в логе сервера.
+	"UNAUTHORIZED": {status: http.StatusUnauthorized, message: "Требуется аутентификация"},
 	"METHOD_NOT_ALLOWED": {
 		status:  http.StatusMethodNotAllowed,
 		message: "Метод не поддерживается",
@@ -100,6 +104,7 @@ var permanentCodes = map[string]struct{}{
 const (
 	CodeInternalError                = "INTERNAL_ERROR"
 	CodeNotFound                     = "NOT_FOUND"
+	CodeUnauthorized                 = "UNAUTHORIZED"
 	CodeMethodNotAllowed             = "METHOD_NOT_ALLOWED"
 	CodeInvalidMetadata              = "INVALID_METADATA"
 	CodeConflict                     = "CONFLICT"
@@ -125,6 +130,7 @@ const (
 
 var (
 	ErrNotFound                     = newAppError(CodeNotFound, "")
+	ErrUnauthorized                 = newAppError(CodeUnauthorized, "")
 	ErrConfigurationMissing         = newAppError(CodeConfigurationMissing, "")
 	ErrConfigurationInvalid         = newAppError(CodeConfigurationInvalid, "")
 	ErrConflict                     = newAppError(CodeConflict, "")
@@ -160,6 +166,11 @@ func newAppError(code, message string) *AppError {
 }
 
 func NotFound(message string) *AppError { return newAppError(CodeNotFound, message) }
+
+// Unauthorized — не хватает действительного токена. Сообщение намеренно
+// одинаково для всех причин отказа: см. комментарий у UNAUTHORIZED в
+// errorRegistry.
+func Unauthorized(message string) *AppError { return newAppError(CodeUnauthorized, message) }
 
 func MethodNotAllowed(message string) *AppError {
 	return newAppError(CodeMethodNotAllowed, message)

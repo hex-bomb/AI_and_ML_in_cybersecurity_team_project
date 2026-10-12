@@ -65,6 +65,7 @@ func TestErrorRegistryHasNoOrphans(t *testing.T) {
 		CodeProviderUnavailable, CodeIndexUnavailable, CodeIndexProfileMismatch,
 		CodeEmbeddingResponseInvalid, CodeEmbeddingDimensionMismatch,
 		CodeUnsupportedFormat, CodeFileTooLarge, CodeTooManyRequests,
+		CodeUnauthorized,
 	}
 
 	for _, code := range allCodes {
