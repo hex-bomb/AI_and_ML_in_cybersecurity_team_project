@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,36 +13,49 @@ import (
 
 const moduleRoot = "../.."
 
-const modulePrefix = "github.com/kbsearch/backend-go/"
+const modulePrefix = "github.com/kbsearch/kb/"
 
+// Слои по схеме развёртывания (kb-architecture.drawio, стр. 2):
+// домен → порты → use-cases → транспорт, и адаптеры, реализующие порты.
 var forbidden = map[string][]string{
-	"internal/domain": {
-		modulePrefix + "internal/application",
-		modulePrefix + "internal/delivery",
-		modulePrefix + "internal/infrastructure",
+	"internal/envelope": {
+		modulePrefix + "internal/ports",
+		modulePrefix + "internal/ingest",
+		modulePrefix + "internal/search",
+		modulePrefix + "internal/access",
+		modulePrefix + "internal/docs",
+		modulePrefix + "internal/jobs",
+		modulePrefix + "internal/store",
+		modulePrefix + "internal/api",
 		"github.com/jackc/pgx",
 		"github.com/elastic/go-elasticsearch",
 		"github.com/knights-analytics/hugot",
 		"github.com/tmc/langchaingo",
 	},
-	"internal/application": {
-		modulePrefix + "internal/delivery",
-		modulePrefix + "internal/infrastructure",
+	"internal/ports": {
+		modulePrefix + "internal/store",
+		modulePrefix + "internal/api",
 	},
-	"internal/delivery": {
-		modulePrefix + "internal/infrastructure",
+	"internal/store": {
+		modulePrefix + "internal/api",
+		modulePrefix + "internal/search",
+		modulePrefix + "internal/access",
+		modulePrefix + "internal/ingest",
+		modulePrefix + "internal/docs",
+		modulePrefix + "internal/jobs",
 	},
-	"internal/infrastructure": {
-		modulePrefix + "internal/application/answers",
-		modulePrefix + "internal/application/auth",
-		modulePrefix + "internal/application/documents",
-		modulePrefix + "internal/application/indexing",
-		modulePrefix + "internal/application/jobs",
-		modulePrefix + "internal/application/kb",
-		modulePrefix + "internal/application/search",
-		modulePrefix + "internal/application/settings",
-		modulePrefix + "internal/delivery",
+	"internal/api": {
+		modulePrefix + "internal/store",
 	},
+}
+
+// useCaseLayers — сценарии, которым запрещён прямой импорт адаптеров.
+var useCaseLayers = []string{
+	"internal/ingest",
+	"internal/search",
+	"internal/access",
+	"internal/docs",
+	"internal/jobs",
 }
 
 var domainAllows = map[string]bool{
@@ -75,30 +89,152 @@ func TestLayerImportsAreOneDirectional(t *testing.T) {
 	}
 }
 
-// TestPortsLiveInApplication ensures ports are declared in application/ports,
-// while domain keeps only value types, invariants and errors.
-func TestPortsLiveInApplication(t *testing.T) {
+// TestPortsLiveInTheirOwnLayer ensures ports are declared in internal/ports,
+// while the envelope keeps only value types, invariants and errors.
+func TestPortsLiveInTheirOwnLayer(t *testing.T) {
 	ports := []string{"ports.go", "sql.go", "repos.go", "clock.go"}
 	for _, name := range ports {
-		if _, err := os.Stat(filepath.Join(moduleRoot, "internal/application/ports", name)); err != nil {
-			t.Errorf("порт %s отсутствует в internal/application/ports: %v", name, err)
+		if _, err := os.Stat(filepath.Join(moduleRoot, "internal/ports", name)); err != nil {
+			t.Errorf("порт %s отсутствует в internal/ports: %v", name, err)
 		}
 	}
 	for _, name := range []string{"ports.go", "pgshim.go", "clock.go"} {
-		if _, err := os.Stat(filepath.Join(moduleRoot, "internal/domain", name)); err == nil {
-			t.Errorf("инфраструктурный порт %s остался в internal/domain", name)
+		if _, err := os.Stat(filepath.Join(moduleRoot, "internal/envelope", name)); err == nil {
+			t.Errorf("порт %s остался в internal/envelope", name)
 		}
 	}
 }
 
-func TestDomainImportsOnlyValueTypes(t *testing.T) {
-	dir := filepath.Join(moduleRoot, "internal/domain")
+// allowedFeatureImports — документированный долг: одни сценарии пока
+// импортируют других напрямую (например, ответы — поиск и настройки).
+// Список закрытый и может только уменьшаться: новая прямая ссылка между
+// сценариями провалит тест. По схеме развёртывания (стр. 2, L2) сценарии
+// общаются только через порты и события, и этот список — план разбора.
+var allowedFeatureImports = map[string][]string{
+	modulePrefix + "internal/search/answers": {
+		modulePrefix + "internal/search/service",
+		modulePrefix + "internal/docs/settings",
+	},
+	modulePrefix + "internal/search/service": {
+		modulePrefix + "internal/docs/settings",
+	},
+	modulePrefix + "internal/jobs/indexing": {
+		modulePrefix + "internal/ingest/parser",
+	},
+	modulePrefix + "internal/jobs/worker": {
+		modulePrefix + "internal/jobs/indexing",
+	},
+	modulePrefix + "internal/docs/kb": {
+		modulePrefix + "internal/docs/settings",
+	},
+}
+
+// adapterImports — адаптеры, которые сценарий узнаёт только через порты.
+// Список вынесен из forbidden["internal/store"] намеренно: тот описывает, что
+// не должен импортировать слой store, и про сами адаптеры не говорит ничего,
+// хотя имя теста обещает запрет ровно их. Без этого списка прямой импорт
+// pgx или клиента Elasticsearch в сценарии проходил молча.
+var adapterImports = []string{
+	modulePrefix + "internal/store",
+	"github.com/jackc/pgx",
+	"github.com/elastic/go-elasticsearch",
+	"github.com/knights-analytics/hugot",
+	"github.com/tmc/langchaingo",
+}
+
+// TestUseCasesDoNotImportAdapters — сценарий узнаёт внешний мир только через
+// порты. Прямой импорт pgx или клиента Elasticsearch здесь означает, что
+// подменить его заглушкой в тесте уже не получится.
+//
+// Список banned взят у internal/store, а значит включает и сами слои
+// сценариев: такой импорт дублирует TestFeatureCrossImportsOnlyShrink.
+// Раньше список allowed проверялся в двух местах, и один и тот же долг
+// назывался то допустимым, то запрещённым; источник правды один —
+// allowedFeatureImports, поэтому здесь долг пропускается, а всё остальное
+// (адаптеры, транспорт, новая прямая ссылка) по-прежнему роняет тест.
+func TestUseCasesDoNotImportAdapters(t *testing.T) {
+	banned := slices.Concat(forbidden["internal/store"], adapterImports)
+	for _, layer := range useCaseLayers {
+		t.Run(layer, func(t *testing.T) {
+			imports, files, err := collectImports(filepath.Join(moduleRoot, layer))
+			if err != nil {
+				t.Fatalf("разбор слоя: %v", err)
+			}
+			if files == 0 {
+				t.Fatalf("в слое %s не нашлось ни одного проверяемого файла", layer)
+			}
+			for _, imp := range imports {
+				for _, bad := range banned {
+					if !matches(imp.path, bad) || documentedDebt(imp.file, imp.path) {
+						continue
+					}
+					t.Errorf("%s импортирует %q — сценарий работает через порты",
+						imp.file, imp.path)
+				}
+			}
+		})
+	}
+}
+
+// documentedDebt сообщает, входит ли импорт path в документированный долг
+// пакета, которому принадлежит file. Ключ allowlist — пакет сценария,
+// а не слой: внутри слоя internal/search долг answers и долг service
+// разные, и сводить их к одному было бы новой поблажкой.
+func documentedDebt(file, path string) bool {
+	rel, err := filepath.Rel(moduleRoot, file)
+	if err != nil {
+		return false
+	}
+	from := modulePrefix + filepath.ToSlash(filepath.Dir(rel))
+	for _, allowed := range allowedFeatureImports[from] {
+		if matches(path, allowed) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestFeatureCrossImportsOnlyShrink — новая прямая зависимость между
+// сценариями запрещена: её место в ports или в событиях.
+func TestFeatureCrossImportsOnlyShrink(t *testing.T) {
+	for from, allowed := range allowedFeatureImports {
+		imports, _, err := collectImports(filepath.Join(moduleRoot, strings.TrimPrefix(from, modulePrefix)))
+		if err != nil {
+			t.Fatalf("разбор %s: %v", from, err)
+		}
+		for _, imp := range imports {
+			if !strings.HasPrefix(imp.path, modulePrefix+"internal/") {
+				continue
+			}
+			feature := strings.TrimSuffix(imp.path, "/")
+			if isUseCaseFeature(feature) && !slices.Contains(allowed, feature) &&
+				!slices.Contains(allowed, feature+"/") {
+				t.Errorf("%s импортирует %q — сценарии общаются через порты и события; "+
+					"если зависимость неизбежна, добавьте её в allowedFeatureImports с причиной",
+					from, imp.path)
+			}
+		}
+	}
+}
+
+// isUseCaseFeature сообщает, относится ли пакет к слою сценариев.
+func isUseCaseFeature(path string) bool {
+	for _, layer := range useCaseLayers {
+		if path == modulePrefix+layer || strings.HasPrefix(path, modulePrefix+layer+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func TestEnvelopeImportsOnlyValueTypes(t *testing.T) {
+	dir := filepath.Join(moduleRoot, "internal/envelope")
 	imports, files, err := collectImports(dir)
 	if err != nil {
-		t.Fatalf("разбор домена: %v", err)
+		t.Fatalf("разбор конверта: %v", err)
 	}
 	if files == 0 {
-		t.Fatal("в домене не нашлось ни одного проверяемого файла")
+		t.Fatal("в конверте не нашлось ни одного проверяемого файла")
 	}
 	for _, imp := range imports {
 		first := strings.SplitN(imp.path, "/", 2)[0]

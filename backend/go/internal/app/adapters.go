@@ -5,15 +5,37 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/backend-go/internal/application/answers"
-	"github.com/kbsearch/backend-go/internal/application/kb"
-	"github.com/kbsearch/backend-go/internal/application/search"
-	"github.com/kbsearch/backend-go/internal/delivery/httpapi"
-	"github.com/kbsearch/backend-go/internal/domain"
+	"github.com/kbsearch/kb/internal/api/http"
+	"github.com/kbsearch/kb/internal/docs/kb"
+	"github.com/kbsearch/kb/internal/envelope"
+	"github.com/kbsearch/kb/internal/ports"
+	"github.com/kbsearch/kb/internal/search/answers"
+	"github.com/kbsearch/kb/internal/search/service"
+	"github.com/kbsearch/kb/internal/store/pg"
 )
 
 // Адаптеры переводят DTO транспорта в типы сценариев (application не может
 // импортировать delivery). Nil-срезы нормализуются в пустые ради JSON [].
+
+// aclScopeAdapter переводит вопрос сценария в вызов оракула прав §6.
+//
+// Слово «переводит» здесь буквальное: оракул отвечает на вопрос спецификации
+// («какие контейнеры и принципалы доступны этому пользователю»), а поиск
+// спрашивает о своём («область доступа для этого запроса, с границами тенанта и
+// базы»). Меняется форма вызова и ничего больше, поэтому тащить такую обвязку в
+// порты ради одного сценария незачем — это работа композиционного корня.
+//
+// Адаптер — не украшение: search.AccessScopeResolver объявлен потребителем
+// (§8), и без реализации в composition root поиск не собрать. Единственное, что
+// тут запрещено, — «съесть» ошибку оракула: сбой прав обязан дойти до сценария и
+// стать отказом, а не пустой областью (см. Service.resolveScope).
+type aclScopeAdapter struct{ resolver *postgres.ACLResolver }
+
+func (a aclScopeAdapter) ResolveScope(
+	ctx context.Context, q ports.Queryer, p domain.Principal, kbID string,
+) (domain.AccessScope, error) {
+	return a.resolver.ResolveScope(ctx, q, postgres.ScopeParams{Principal: p, KBID: kbID})
+}
 
 type searchAdapter struct{ svc *search.Service }
 

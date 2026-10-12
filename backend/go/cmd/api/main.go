@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kbsearch/backend-go/internal/app"
-	"github.com/kbsearch/backend-go/internal/config"
-	"github.com/kbsearch/backend-go/internal/migrations"
+	"github.com/kbsearch/kb/internal/app"
+	"github.com/kbsearch/kb/internal/platform/config"
+	"github.com/kbsearch/kb/migrations"
 )
 
 func main() {

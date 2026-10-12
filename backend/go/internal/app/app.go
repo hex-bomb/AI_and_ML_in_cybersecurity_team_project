@@ -6,21 +6,21 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/kbsearch/backend-go/internal/application/answers"
-	"github.com/kbsearch/backend-go/internal/application/auth"
-	"github.com/kbsearch/backend-go/internal/application/documents"
-	"github.com/kbsearch/backend-go/internal/application/jobs"
-	"github.com/kbsearch/backend-go/internal/application/kb"
-	"github.com/kbsearch/backend-go/internal/application/ports"
-	"github.com/kbsearch/backend-go/internal/application/search"
-	"github.com/kbsearch/backend-go/internal/application/settings"
-	"github.com/kbsearch/backend-go/internal/config"
-	"github.com/kbsearch/backend-go/internal/delivery/httpapi"
-	"github.com/kbsearch/backend-go/internal/infrastructure/elasticsearch"
-	"github.com/kbsearch/backend-go/internal/infrastructure/embeddings"
-	"github.com/kbsearch/backend-go/internal/infrastructure/ollama"
-	"github.com/kbsearch/backend-go/internal/infrastructure/postgres"
-	"github.com/kbsearch/backend-go/internal/infrastructure/storage"
+	"github.com/kbsearch/kb/internal/access/auth"
+	"github.com/kbsearch/kb/internal/api/http"
+	"github.com/kbsearch/kb/internal/docs/kb"
+	"github.com/kbsearch/kb/internal/docs/settings"
+	"github.com/kbsearch/kb/internal/ingest/parser"
+	"github.com/kbsearch/kb/internal/jobs/queue"
+	"github.com/kbsearch/kb/internal/platform/config"
+	"github.com/kbsearch/kb/internal/ports"
+	"github.com/kbsearch/kb/internal/search/answers"
+	"github.com/kbsearch/kb/internal/search/service"
+	"github.com/kbsearch/kb/internal/store/es"
+	"github.com/kbsearch/kb/internal/store/llm"
+	"github.com/kbsearch/kb/internal/store/pg"
+	"github.com/kbsearch/kb/internal/store/s3"
+	"github.com/kbsearch/kb/internal/store/tei"
 )
 
 // Deps — собранные зависимости. Close освобождает модель и пул.
@@ -101,7 +101,13 @@ func (d *Deps) wire(_ context.Context) {
 
 	d.KB = kbAdapter{svc: kb.New(kbs, authorizer, d.Pool, d.Pool)}
 
-	searchSvc := search.New(d.Pool, kbs, docs, d.Index, d.Embedder, settingsSvc)
+	// Права §6: один запрос к Postgres на поисковый запрос, а область уезжает в
+	// индекс термами запроса (ports.SecuredSearchIndex), а не списком
+	// document_id. Старая сборка (ports.SearchIndex + SearchFilter.
+	// AllowedDocumentIDs) помечена в портах как legacy и не собирается здесь
+	// намеренно: она материализовала все доступные документы на каждый запрос.
+	searchSvc := search.New(d.Pool, kbs, docs, d.Index,
+		aclScopeAdapter{resolver: postgres.NewACLResolver()}, d.Embedder, settingsSvc)
 	d.Search = searchAdapter{svc: searchSvc}
 
 	llm := ollama.New(ollama.Config{

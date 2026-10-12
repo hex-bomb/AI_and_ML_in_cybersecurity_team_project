@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kbsearch/backend-go/internal/config"
-	"github.com/kbsearch/backend-go/internal/delivery/httpapi"
-	"github.com/kbsearch/backend-go/internal/domain"
+	"github.com/kbsearch/kb/internal/api/http"
+	"github.com/kbsearch/kb/internal/envelope"
+	"github.com/kbsearch/kb/internal/platform/config"
 )
 
 // localAuth — локальный режим без токена (ТЗ 9); настоящая авторизация

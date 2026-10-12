@@ -1,4 +1,4 @@
-module github.com/kbsearch/backend-go
+module github.com/kbsearch/kb
 
 go 1.27.0
 

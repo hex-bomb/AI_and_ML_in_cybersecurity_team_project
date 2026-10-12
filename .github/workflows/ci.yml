@@ -88,17 +88,38 @@ jobs:
           go-version: '1.27.0'
           cache-dependency-path: backend/go/go.sum
 
-      - name: Тесты инфраструктуры
-        run: go test -race -count=1 -timeout 20m ./internal/infrastructure/...
+      # Путь к пакетам исправлен: internal/infrastructure переехал в
+      # internal/store после перестройки, и старый шаблон молча ничего не
+      # запускал — ворота §9 «права» считались закрытыми без единого теста.
+      - name: Тесты хранилищ и ворот
+        run: go test -race -count=1 -timeout 20m ./internal/store/... ./internal/arch/...
 
       - name: Пропусков быть не должно
         run: |
           # -v печатает SKIP-строки; любая из них означает, что интеграция
           # фактически не проверялась и ворота §9 «права» закрыты нечем.
-          go test -count=1 -timeout 20m -v ./internal/infrastructure/... \
+          go test -count=1 -timeout 20m -v ./internal/store/... ./internal/arch/... \
             | tee /tmp/integration.log >/dev/null
           if grep -q -- '--- SKIP' /tmp/integration.log; then
             echo "::error::интеграционные тесты были пропущены — проверь сервисы и переменные"
             grep -- '--- SKIP' -A2 /tmp/integration.log | head -40
+            exit 1
+          fi
+
+      # Ворота «Удаление» на живом индексе идут отдельным шагом намеренно:
+      # dropProfileIndices в cleanup интеграционных тестов internal/store/es
+      # удаляет все индексы kb-chunks-*, и в общем прогоне (пакеты идут
+      # параллельно) индекс ворот пропадает между записью и поиском. Поэтому
+      # тест требует явного KB_GO_GATES_CLUSTER и изолированного прогона.
+      - name: Ворота удаления на живом индексе
+        env:
+          KB_GO_GATES_CLUSTER: '1'
+        run: |
+          go test -count=1 -timeout 10m -v \
+            -run TestУдалениеДокументаИсчезаетИзВыдачиНаКластере ./internal/arch/ \
+            | tee /tmp/gates.log >/dev/null
+          if grep -q -- '--- SKIP' /tmp/gates.log; then
+            echo "::error::ворота удаления пропущены — ворота §9 «удаление» не закрыты"
+            grep -- '--- SKIP' -A2 /tmp/gates.log | head -40
             exit 1
           fi

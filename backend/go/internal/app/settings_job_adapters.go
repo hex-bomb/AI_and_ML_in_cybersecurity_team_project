@@ -8,12 +8,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kbsearch/backend-go/internal/application/jobs"
-	"github.com/kbsearch/backend-go/internal/application/ports"
-	"github.com/kbsearch/backend-go/internal/application/settings"
-	"github.com/kbsearch/backend-go/internal/delivery/httpapi"
-	"github.com/kbsearch/backend-go/internal/domain"
-	"github.com/kbsearch/backend-go/internal/infrastructure/postgres"
+	"github.com/kbsearch/kb/internal/api/http"
+	"github.com/kbsearch/kb/internal/docs/settings"
+	"github.com/kbsearch/kb/internal/envelope"
+	"github.com/kbsearch/kb/internal/jobs/queue"
+	"github.com/kbsearch/kb/internal/ports"
+	"github.com/kbsearch/kb/internal/store/pg"
 )
 
 // settingsAdapter переводит DTO транспорта в вызов диагностики настроек.

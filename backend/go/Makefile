@@ -9,10 +9,10 @@ GOLANGCI_LINT ?= $(shell $(GO) env GOPATH)/bin/golangci-lint
 # а бинарь, собранный более старым go, отказывается читать конфиг.
 GOTOOLCHAIN ?= go1.27.0
 
-MODULE := github.com/kbsearch/backend-go
+MODULE := github.com/kbsearch/kb
 # Контракт лежит в корне монорепозитория, а модуль — на два уровня ниже.
 SPEC := ../../contracts/openapi.json
-GENERATED := internal/contracts/api.gen.go
+GENERATED := api/api.gen.go
 
 .PHONY: help
 help: ## Показать доступные цели
@@ -50,7 +50,7 @@ test-short: ## Тесты без гонок — быстрый цикл при �
 
 .PHONY: test-e5
 test-e5: ## Тесты с настоящей ONNX-моделью (448 МБ, нужен кэш)
-	$(GO) test -tags e5 -timeout 30m -v ./internal/infrastructure/embeddings/
+	$(GO) test -tags e5 -timeout 30m -v ./internal/store/tei/
 
 .PHONY: cover
 cover: ## Покрытие пакетами

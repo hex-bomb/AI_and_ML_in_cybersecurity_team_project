@@ -31,69 +31,95 @@ linters:
   settings:
     depguard:
       rules:
-        # Домен — чистый: только типы-значения, инварианты и ошибки. Импорт адаптера здесь означает, что бизнес-правило уехало
-        # в реализацию, и его больше нельзя подменить заглушкой в тесте.
-        domain:
+        # Слои по схеме развёртывания (kb-architecture.drawio, стр. 2):
+        #   L1 транспорт  → internal/api, cmd/kb
+        #   L2 use-cases  → internal/{ingest,search,access,docs,jobs}
+        #   L3 порты      → internal/ports
+        #   L4 адаптеры   → internal/store/*
+        #   домен         → internal/envelope
+        # Импорт адаптера в домен означает, что бизнес-правило уехало в
+        # реализацию, и его больше нельзя подменить заглушкой в тесте.
+
+        # Домен — чистый: типы-значения, инварианты, ошибки.
+        envelope:
           files:
-            - "**/internal/domain/**"
+            - "**/internal/envelope/**"
           deny:
-            - pkg: github.com/kbsearch/backend-go/internal/infrastructure
-              desc: "domain не зависит от infrastructure: порты объявляются здесь, реализации — там"
-            - pkg: github.com/kbsearch/backend-go/internal/application
-              desc: "domain не зависит от application: это нижний слой"
-            - pkg: github.com/kbsearch/backend-go/internal/delivery
-              desc: "domain не зависит от delivery"
+            - pkg: github.com/kbsearch/kb/internal/store
+              desc: "envelope не зависит от store: порты объявляются здесь, реализации — там"
+            - pkg: github.com/kbsearch/kb/internal/ingest
+              desc: "envelope не зависит от use-case слоёв: это нижний слой"
+            - pkg: github.com/kbsearch/kb/internal/search
+              desc: "envelope не зависит от use-case слоёв"
+            - pkg: github.com/kbsearch/kb/internal/access
+              desc: "envelope не зависит от use-case слоёв"
+            - pkg: github.com/kbsearch/kb/internal/docs
+              desc: "envelope не зависит от use-case слоёв"
+            - pkg: github.com/kbsearch/kb/internal/jobs
+              desc: "envelope не зависит от use-case слоёв"
+            - pkg: github.com/kbsearch/kb/internal/ports
+              desc: "envelope объявляет типы сам; порты описывают то, что снаружи"
+            - pkg: github.com/kbsearch/kb/internal/api
+              desc: "envelope не зависит от транспорта"
             - pkg: github.com/knights-analytics/hugot
-              desc: "домен объявляет порт Embedder; ONNX-инференс — за его пределами"
-            - pkg: github.com/tmc/langchaingo
-              desc: "домен объявляет порт LLM; langchaingo — реализация в infrastructure"
+              desc: "envelope объявляет порт Embedder; ONNX-инференс — за его пределами"
             - pkg: github.com/elastic/go-elasticsearch
-              desc: "домен объявляет порт SearchIndex; клиент Elasticsearch — инфраструктура"
+              desc: "envelope объявляет порт SearchIndex; клиент Elasticsearch — адаптер"
             - pkg: github.com/jackc/pgx
-              desc: "домен объявляет репозитории; pgx — инфраструктура"
+              desc: "envelope объявляет репозитории; pgx — адаптер"
 
-        # Application собирает сценарии через порты домена. Прямой вызов
-        # адаптера лишает сценарий возможности подменить его в тесте.
-        application:
+        # Порты — контракты между слоями: ни реализаций, ни потребителей.
+        ports:
           files:
-            - "**/internal/application/**"
+            - "**/internal/ports/**"
           deny:
-            - pkg: github.com/kbsearch/backend-go/internal/infrastructure
-              desc: "application работает через порты домена; прямой импорт адаптера — нарушение слоёв"
-            - pkg: github.com/kbsearch/backend-go/internal/delivery
-              desc: "application не знает о HTTP: транспорт — задача delivery"
+            - pkg: github.com/kbsearch/kb/internal/store
+              desc: "порт описывает контракт; его реализация живёт в store"
+            - pkg: github.com/kbsearch/kb/internal/api
+              desc: "порт не знает о транспорте"
+            - pkg: github.com/jackc/pgx
+              desc: "порт возвращает значения домена, а не строки драйвера"
 
-        # Delivery отвечает за транспорт и не должен знать, чем именно
-        # реализован поиск: он получает готовые зависимости от application.
-        delivery:
+        # Use-cases собирают сценарии через порты. Прямой вызов адаптера
+        # лишает сценарий возможности подменить его в тесте.
+        usecase:
           files:
-            - "**/internal/delivery/**"
+            - "**/internal/ingest/**"
+            - "**/internal/search/**"
+            - "**/internal/access/**"
+            - "**/internal/docs/**"
+            - "**/internal/jobs/**"
           deny:
-            - pkg: github.com/kbsearch/backend-go/internal/infrastructure
-              desc: "delivery собирает зависимости через application, а не импортирует адаптеры напрямую"
+            - pkg: github.com/kbsearch/kb/internal/store
+              desc: "use-case работает через порты; прямой импорт адаптера — нарушение слоёв"
+            - pkg: github.com/kbsearch/kb/internal/api
+              desc: "use-case не знает о HTTP: транспорт — задача internal/api"
 
-        infrastructure:
+        # Транспорт получает готовые сценарии и не знает, чем реализован поиск.
+        transport:
           files:
-            - "**/internal/infrastructure/**"
+            - "**/internal/api/**"
           deny:
-            - pkg: github.com/kbsearch/backend-go/internal/delivery
-              desc: "инфраструктура не знает о транспортном слое"
-            - pkg: github.com/kbsearch/backend-go/internal/application/answers
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/auth
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/documents
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/indexing
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/jobs
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/kb
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/search
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
-            - pkg: github.com/kbsearch/backend-go/internal/application/settings
-              desc: "инфраструктура реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/kb/internal/store
+              desc: "транспорт собирает зависимости через use-cases, а не импортирует адаптеры напрямую"
+
+        # Адаптеры реализуют порты и не вызывают сценарии: иначе появляется цикл.
+        store:
+          files:
+            - "**/internal/store/**"
+          deny:
+            - pkg: github.com/kbsearch/kb/internal/api
+              desc: "адаптер не знает о транспортном слое"
+            - pkg: github.com/kbsearch/kb/internal/search
+              desc: "адаптер реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/kb/internal/access
+              desc: "адаптер реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/kb/internal/ingest
+              desc: "адаптер реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/kb/internal/docs
+              desc: "адаптер реализует порты, а не вызывает сценарии: иначе появляется цикл"
+            - pkg: github.com/kbsearch/kb/internal/jobs
+              desc: "адаптер реализует порты, а не вызывает сценарии: иначе появляется цикл"
 
   exclusions:
     paths:
@@ -101,7 +127,7 @@ linters:
       - tmp-ping/
     rules:
       # Код, сгенерированный из OpenAPI, — не наш; правила к нему не применяем.
-      - path: internal/contracts/api.gen.go
+      - path: api/api.gen.go
         linters:
           - errcheck
           - govet

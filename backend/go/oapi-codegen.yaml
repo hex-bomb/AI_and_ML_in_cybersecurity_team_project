@@ -17,7 +17,7 @@ package: contracts
 # v2.8.0 путь к ней НЕ часть конфига: ключа `input` в схеме нет, файл
 # передаётся позиционным аргументом (см. target `contract` в Makefile).
 # Спецификация лежит в корне репозитория, из backend/go это ../../contracts.
-output: internal/contracts/api.gen.go
+output: api/api.gen.go
 
 generate:
   models: true
@@ -36,4 +36,4 @@ output-options:
     # регистрирует переопределение под этим именем. Без префикса strict/
     # шаблон подменит другой (с таким же именем) файл и strict-сервер соберётся из
     # непропатченного upstream.
-    strict/strict-interface.tmpl: internal/contracts/templates/strict-interface.tmpl
+    strict/strict-interface.tmpl: api/templates/strict-interface.tmpl
