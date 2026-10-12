@@ -3,12 +3,15 @@ package app
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
+	"github.com/kbsearch/kb/internal/access/auth"
 	"github.com/kbsearch/kb/internal/api/http"
 	"github.com/kbsearch/kb/internal/envelope"
 	"github.com/kbsearch/kb/internal/platform/config"
+	"github.com/kbsearch/kb/internal/ports"
 )
 
 // localAuth — локальный режим без токена (ТЗ 9); настоящая авторизация
@@ -26,6 +29,55 @@ func newLocalAuth(cfg config.Config) httpapi.AuthScenario {
 		tenant = uuid.Nil
 	}
 	return localAuth{tenantID: tenant, userID: "local"}
+}
+
+// newAuth выбирает реализацию по AUTH_MODE.
+//
+// Причина, по которой это переключение нельзя спрятать в NewOIDC или сделать
+// «умным»: AUTH_MODE=oidc с незаполненным OIDC_* обязан ронять старт, а не
+// молча деградировать в локальный режим, где любой запрос — администратор.
+func newAuth(cfg config.Config) (httpapi.AuthScenario, error) {
+	switch cfg.AuthMode {
+	case "", "local":
+		return newLocalAuth(cfg), nil
+	case "oidc":
+		// Проверяем здесь, а не полагаемся на config.Validate: NewHTTPJWKS("")
+		// вернёт непустой объект, который будет падать уже на первом
+		// запросе — то есть в проде, а не на старте.
+		for _, required := range []struct {
+			name  string
+			value string
+		}{
+			{"OIDC_ISSUER", cfg.OIDCIssuer},
+			{"OIDC_AUDIENCE", cfg.OIDCAudience},
+			{"OIDC_JWKS_URL", cfg.OIDCJWKSURL},
+		} {
+			if strings.TrimSpace(required.value) == "" {
+				return nil, domain.ConfigurationInvalid(
+					"При AUTH_MODE=oidc обязательны OIDC_ISSUER, OIDC_AUDIENCE и OIDC_JWKS_URL",
+					map[string]any{"переменная": required.name},
+				)
+			}
+		}
+		verifier, err := auth.NewOIDC(auth.OIDCOptions{
+			Issuer:      cfg.OIDCIssuer,
+			Audience:    cfg.OIDCAudience,
+			JWKS:        auth.NewHTTPJWKS(cfg.OIDCJWKSURL),
+			Clock:       ports.SystemClock{},
+			TenantClaim: cfg.OIDCTenantClaim,
+			RolesClaim:  cfg.OIDCRolesClaim,
+			GroupsClaim: cfg.OIDCGroupsClaim,
+			RightsTTL:   cfg.OIDCRightsTTL,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return verifier, nil
+	default:
+		// config.Validate это уже отвергает; повторяем, чтобы непроверенный
+		// конфиг не приводил к «аутентификации отключена».
+		return nil, domain.ConfigurationInvalid("Неизвестный AUTH_MODE", map[string]any{"mode": cfg.AuthMode})
+	}
 }
 
 func (a localAuth) Principal(_ *http.Request) (domain.Principal, error) {
@@ -78,6 +130,8 @@ func (h health) Ready(ctx context.Context) (map[string]bool, error) {
 }
 
 // tenantID — tenant локального режима из того же источника, что Principal.
+// В режиме OIDC tenant приходит из токена, и здесь его нет: не подставляем
+// пустой tenant, чтобы не выдать права не тому.
 func (d *Deps) tenantID() uuid.UUID {
 	local, ok := d.Auth.(localAuth)
 	if !ok {

@@ -80,7 +80,14 @@ func New(ctx context.Context, cfg config.Config) (*Deps, error) {
 		Embedder: embedder,
 		Index:    index,
 	}
-	d.Auth = newLocalAuth(cfg)
+	authScenario, err := newAuth(cfg)
+	if err != nil {
+		pool.Close()
+		_ = embedder.Close()
+		_ = index.Close(context.Background())
+		return nil, fmt.Errorf("аутентификация: %w", err)
+	}
+	d.Auth = authScenario
 	d.Health = newHealth(d)
 	d.wire(ctx)
 	d.Close = func() {

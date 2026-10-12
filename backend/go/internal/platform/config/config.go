@@ -24,6 +24,13 @@ const (
 	defaultLLMToolRoundTokens   = 256
 	defaultLLMTemperature       = 0.75
 	defaultAuthMode             = "local"
+	// Значения клеймов по умолчанию совпадают с принятыми в OIDC-профилях
+	// Keycloak и Entra; переопределяются переменными окружения, потому что
+	// у каждого IdP свои имена.
+	defaultOIDCTenantClaim      = "tenant_id"
+	defaultOIDCRolesClaim       = "roles"
+	defaultOIDCGroupsClaim      = "groups"
+	defaultOIDCRightsTTLSeconds = 300
 	defaultLocalTenantID        = "11111111-1111-4111-8111-111111111111"
 	defaultMaxUploadBytes       = 20 * 1024 * 1024
 	defaultWorkerPollInterval   = 2000
@@ -58,6 +65,16 @@ type Config struct {
 
 	AuthMode      string
 	LocalTenantID string
+
+	// Параметры OIDC. Обязательны только при AUTH_MODE=oidc; в локальном
+	// режиме остаются пустыми, чтобы локальная сборка не зависела от IdP.
+	OIDCIssuer      string
+	OIDCAudience    string
+	OIDCJWKSURL     string
+	OIDCTenantClaim string
+	OIDCRolesClaim  string
+	OIDCGroupsClaim string
+	OIDCRightsTTL   time.Duration
 
 	CORSAllowedOrigins []string
 
@@ -125,6 +142,13 @@ func Load() (Config, error) {
 		LLMTokenBudget:        parse("LLM_TOOL_ROUND_TOKENS", defaultLLMToolRoundTokens),
 		AuthMode:              env("AUTH_MODE", defaultAuthMode),
 		LocalTenantID:         env("LOCAL_TENANT_ID", defaultLocalTenantID),
+		OIDCIssuer:            env("OIDC_ISSUER", ""),
+		OIDCAudience:          env("OIDC_AUDIENCE", ""),
+		OIDCJWKSURL:           env("OIDC_JWKS_URL", ""),
+		OIDCTenantClaim:       env("OIDC_TENANT_CLAIM", defaultOIDCTenantClaim),
+		OIDCRolesClaim:        env("OIDC_ROLES_CLAIM", defaultOIDCRolesClaim),
+		OIDCGroupsClaim:       env("OIDC_GROUPS_CLAIM", defaultOIDCGroupsClaim),
+		OIDCRightsTTL:         time.Duration(parse("OIDC_RIGHTS_TTL_SECONDS", defaultOIDCRightsTTLSeconds)) * time.Second,
 		MaxUploadBytes:        parseInt64("MAX_UPLOAD_BYTES", defaultMaxUploadBytes),
 		WorkerPollInterval:    time.Duration(parse("WORKER_POLL_INTERVAL_MS", defaultWorkerPollInterval)) * time.Millisecond,
 	}
@@ -172,6 +196,28 @@ func (c Config) validate() []string {
 	}
 	if c.AuthMode == "local" && c.LocalTenantID == "" {
 		wrong = append(wrong, "LOCAL_TENANT_ID обязателен при AUTH_MODE=local")
+	}
+	// При AUTH_MODE=oidc недопустимо молча падать в локальный режим: сервис
+	// продолжил бы принимать любой запрос как локальный администратор.
+	if c.AuthMode != "local" && c.AuthMode != "oidc" {
+		wrong = append(wrong, "AUTH_MODE должен быть local или oidc, получено "+c.AuthMode)
+	}
+	if c.AuthMode == "oidc" {
+		for _, required := range []struct {
+			name  string
+			value string
+		}{
+			{"OIDC_ISSUER", c.OIDCIssuer},
+			{"OIDC_AUDIENCE", c.OIDCAudience},
+			{"OIDC_JWKS_URL", c.OIDCJWKSURL},
+		} {
+			if strings.TrimSpace(required.value) == "" {
+				wrong = append(wrong, required.name+" обязателен при AUTH_MODE=oidc")
+			}
+		}
+		if c.OIDCRightsTTL <= 0 {
+			wrong = append(wrong, "OIDC_RIGHTS_TTL_SECONDS должен быть положительным")
+		}
 	}
 	if c.AuthMode == "local" && !isLocalListenAddr(c.Addr) {
 		wrong = append(wrong, "AUTH_MODE=local запрещает конкретные внешние адреса (разрешены loopback и 0.0.0.0 под docker-публикацию на 127.0.0.1)")
