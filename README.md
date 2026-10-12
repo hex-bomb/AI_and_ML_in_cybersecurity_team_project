@@ -242,7 +242,7 @@ DATABASE_URL=postgresql://kb:dev@127.0.0.1:55432/kb ELASTICSEARCH_URL=http://127
 
 Проверка всех эндпоинтов: `API=http://127.0.0.1:8000 bash backend/scripts/check_endpoints.sh`.
 Контракт: `contracts/openapi.json` — источник истины; типы (`api.gen.go`) и раздача
-`GET /api/v1/openapi.json` идут из встроенной копии (`internal/contracts/spec.go`),
+`GET /api/v1/openapi.json` идут из встроенной копии (`api/spec.go`),
 расхождение ловит `TestEmbeddedSpecMatchesFile`. Тесты: `go test ./...` в `backend/go`.
 
 ## Известные ограничения
