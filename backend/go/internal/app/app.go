@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/kbsearch/kb/internal/access/auth"
 	httpapi "github.com/kbsearch/kb/internal/api/http"
 	"github.com/kbsearch/kb/internal/docs/kb"
 	"github.com/kbsearch/kb/internal/docs/settings"
@@ -104,7 +103,10 @@ func (d *Deps) wire(_ context.Context) {
 	kbs := postgres.NewKBRepository()
 	docs := postgres.NewDocumentRepository(clock)
 	settingsSvc := settings.New(postgres.NewSettingsRepository())
-	authorizer := auth.NewLocal(d.tenantID())
+	// Авторизатор выбирается по режиму аутентификации. Local одноtenantный и о
+	// ролях не знает; в режиме OIDC tenant приходит из токена, и подставлять
+	// константу нельзя — иначе права получает тот, у кого tenant тоже нулевой.
+	authorizer := d.authorizer()
 
 	d.KB = kbAdapter{svc: kb.New(kbs, authorizer, d.Pool, d.Pool)}
 

@@ -1,10 +1,19 @@
 package app
 
 import (
+	"context"
+	"crypto/rsa"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/google/uuid"
+
 	"strings"
 	"testing"
+
+	"github.com/kbsearch/kb/internal/access/auth"
+	domain "github.com/kbsearch/kb/internal/envelope"
 
 	"github.com/kbsearch/kb/internal/platform/config"
 )
@@ -143,3 +152,60 @@ func TestNewAuthOIDCОтвергаетЗапросБезТокена(t *testing.
 }
 
 const domainUnauthorizedCode = "UNAUTHORIZED"
+
+// TestOIDCНеДаётАдминаНулевомуTenant: регрессия на дефект C-1 из аудита
+// безопасности.
+//
+// Цепочка дефекта: в режиме oidc Deps.tenantID() возвращал uuid.Nil, потому что
+// d.Auth — это *auth.OIDC, а не localAuth. Авторизатор собирался как
+// NewLocal(uuid.Nil), а его RequireAdmin пропускает любого, у кого TenantID
+// равен нулевому UUID. Токен с tenant_id = 00000000-... проходил
+// аутентификацию (principalFrom нулевой UUID не отвергал) и получал права
+// администратора на всю базу знаний. Второй исход той же строки: нормальный
+// администратор своего tenant отклонялся.
+//
+// Проверяется через реальную сборку Deps.authorizer, а не ручным созданием
+// Local — иначе тест зафиксировал бы старую, сломанную конструкцию.
+func TestOIDCНеДаётАдминаНулевомуTenant(t *testing.T) {
+	oidc, err := auth.NewOIDC(auth.OIDCOptions{
+		Issuer:   "https://idp.example.com",
+		Audience: "kbsearch",
+		JWKS:     neverKeys{},
+	})
+	if err != nil {
+		t.Fatalf("NewOIDC: %v", err)
+	}
+	d := &Deps{Config: config.Config{AuthMode: "oidc"}, Auth: oidc}
+	authorizer := d.authorizer()
+
+	// Принципал с нулевым tenant — ровно тот, что даёт такой токен.
+	attacker := domain.Principal{TenantID: uuid.Nil, UserID: "anna", Roles: []string{"reader"}}
+	if err := authorizer.RequireAdmin(attacker); err == nil {
+		t.Error("Принципал с нулевым tenant получил права администратора — эскалация")
+	}
+
+	// Администратор своего tenant обязан проходить: режим OIDC не должен
+	// быть сломан для легитимных пользователей.
+	real := domain.Principal{
+		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
+		UserID:   "bob",
+		Roles:    []string{auth.RoleAdmin},
+	}
+	if err := authorizer.RequireAdmin(real); err != nil {
+		t.Errorf("Администратор своего tenant отклонён: %v", err)
+	}
+
+	// Читатель своего tenant администратором не является.
+	reader := domain.Principal{TenantID: real.TenantID, UserID: "carol", Roles: []string{"reader"}}
+	if err := authorizer.RequireAdmin(reader); err == nil {
+		t.Error("Читатель получил права администратора")
+	}
+}
+
+// neverKeys — JWKS-заглушка для тестов выбора авторизатора: ключи тут не
+// нужны, проверяется не разбор токена, а то, какой авторизатор собран.
+type neverKeys struct{}
+
+func (neverKeys) Fetch(context.Context) (map[string]*rsa.PublicKey, error) {
+	return nil, errors.New("в этом тесте ключи не загружаются")
+}

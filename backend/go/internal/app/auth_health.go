@@ -129,9 +129,24 @@ func (h health) Ready(ctx context.Context) (map[string]bool, error) {
 	return checks, nil
 }
 
+// authorizer — авторизатор, соответствующий выбранному режиму.
+//
+// Раньше здесь стоял безусловный NewLocal(d.tenantID()), а tenantID() в режиме
+// OIDC возвращала uuid.Nil. Авторизатор с нулевым tenant пропускает любого, у
+// кого TenantID тоже нулевой, — то есть любой, кто принёс токен с
+// tenant_id = 00000000-0000-0000-0000-000000000000, получал администратора
+// на всю базу знаний. Плюс наоборот: нормальный администратор своего tenant
+// отклонялся, потому что его tenant не совпадал с константой.
+func (d *Deps) authorizer() ports.Authorizer {
+	if _, isOIDC := d.Auth.(*auth.OIDC); isOIDC {
+		return auth.NewTenantRBAC()
+	}
+	return auth.NewLocal(d.tenantID())
+}
+
 // tenantID — tenant локального режима из того же источника, что Principal.
-// В режиме OIDC tenant приходит из токена, и здесь его нет: не подставляем
-// пустой tenant, чтобы не выдать права не тому.
+// В режиме OIDC tenant приходит из токена, и константы для него нет: значение
+// намеренно не подставляется, чтобы не выдать права не тому.
 func (d *Deps) tenantID() uuid.UUID {
 	local, ok := d.Auth.(localAuth)
 	if !ok {
