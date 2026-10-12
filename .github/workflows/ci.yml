@@ -94,15 +94,34 @@ jobs:
       - name: Тесты хранилищ и ворот
         run: go test -race -count=1 -timeout 20m ./internal/store/... ./internal/arch/...
 
-      - name: Пропусков быть не должно
+      # Допустим ровно один пропуск — тот самый тест ворот удаления, который
+      # по устройству запускается отдельным шагом ниже и здесь обязан
+      # пропустить. Раньше шаг не знал про это исключение и падал на нём:
+      # проверка «пропусков быть не должно» и «ворота требуют отдельного
+      # стенда» противоречили друг другу.
+      #
+      # Список исключений не разрастается молча: новый пропуск сюда не
+      # попадёт и уронит сборку, как и должен.
+      - name: Пропусков быть не должно (кроме ворот удаления)
         run: |
-          # -v печатает SKIP-строки; любая из них означает, что интеграция
-          # фактически не проверялась и ворота §9 «права» закрыты нечем.
+          set -o pipefail
+          ALLOWED='TestУдалениеДокументаИсчезаетИзВыдачиНаКластере'
           go test -count=1 -timeout 20m -v ./internal/store/... ./internal/arch/... \
             | tee /tmp/integration.log >/dev/null
-          if grep -q -- '--- SKIP' /tmp/integration.log; then
-            echo "::error::интеграционные тесты были пропущены — проверь сервисы и переменные"
-            grep -- '--- SKIP' -A2 /tmp/integration.log | head -40
+
+          # Считаем все пропуски и вычитаем допустимые по имени теста.
+          total=$(grep -c -- '--- SKIP' /tmp/integration.log || true)
+          allowed=$(grep -- '--- SKIP' /tmp/integration.log | grep -c -F "$ALLOWED" || true)
+          unexpected=$((total - allowed))
+
+          echo "пропусков всего: $total, из них допустимых ($ALLOWED): $allowed"
+          if [ "$allowed" -gt 1 ]; then
+            echo "::error::ворота удаления не должны пропускаться более одного раза"
+            exit 1
+          fi
+          if [ "$unexpected" -ne 0 ]; then
+            echo "::error::интеграционные тесты были пропущены ($unexpected шт.) — проверь сервисы и переменные"
+            grep -- '--- SKIP' /tmp/integration.log | grep -v -F "$ALLOWED" | head -40
             exit 1
           fi
 
