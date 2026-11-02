@@ -116,16 +116,18 @@ public class DocumentRepository {
                 .optional();
     }
 
-    public List<Entry> list(String kbId) {
+    public List<Entry> list(String kbId, int limit) {
         return jdbc.sql("""
                 select d.external_id, d.title, d.audience, d.section, count(v.id) as versions
                   from documents d
                   left join document_versions v on v.document_id = d.id
                  where d.kb_id = :kb
-                 group by d.external_id, d.title, d.audience, d.section
+                 group by d.id, d.external_id, d.title, d.audience, d.section, d.created_at
                  order by d.created_at desc
+                 limit :limit
                 """)
                 .param("kb", kbId)
+                .param("limit", limit)
                 .query((rs, row) -> new Entry(
                         rs.getString("external_id"),
                         rs.getString("title"),
