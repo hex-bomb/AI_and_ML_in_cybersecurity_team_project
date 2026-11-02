@@ -2,6 +2,56 @@
 
 import hashlib
 import json
+import re
+
+_SENTENCE = re.compile(r"(?<=[.!?…])\s+")
+
+
+def split(text: str, chunk_chars: int = 1200, overlap: int = 200) -> list[str]:
+    """Нарезать текст на перекрывающиеся окна по предложениям.
+
+    Предложение длиннее окна (таблица, лог, текст без пунктуации) режется
+    жёстко: иначе окно превышает лимит токенизатора и хвост молча теряется.
+
+    Parameters
+    ----------
+    text : str
+        Полный текст версии документа.
+    chunk_chars : int
+        Максимальная длина окна.
+    overlap : int
+        Перекрытие соседних окон в символах.
+
+    Returns
+    -------
+    list[str]
+        Окна длиной не больше ``chunk_chars``.
+    """
+    chunks: list[str] = []
+    current = ""
+    for sentence in (part.strip() for part in _SENTENCE.split(text)):
+        if not sentence:
+            continue
+        if len(sentence) > chunk_chars:
+            if current:
+                chunks.append(current)
+                current = ""
+            step = max(1, chunk_chars - overlap)
+            for start in range(0, len(sentence), step):
+                chunks.append(sentence[start : start + chunk_chars])
+                if start + chunk_chars >= len(sentence):
+                    break
+            continue
+        if len(current) + len(sentence) + 1 <= chunk_chars:
+            current = f"{current} {sentence}".strip()
+            continue
+        if current:
+            chunks.append(current)
+        tail = current[-overlap:] if overlap and current else ""
+        current = f"{tail} {sentence}".strip()
+    if current:
+        chunks.append(current)
+    return chunks or [text[:chunk_chars]]
 
 
 def chunk_id(document_id: str, version_id: str, position: int, text: str) -> str:
