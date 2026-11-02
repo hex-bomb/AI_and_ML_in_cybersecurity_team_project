@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -48,8 +49,15 @@ type Verifier struct {
 
 	// refreshMu сериализует обновления, чтобы не устраивать шторм запросов к auth.
 	refreshMu sync.Mutex
-	ttl       time.Duration
+	// nextAttempt — пауза после неудачного обновления; читается только под refreshMu.
+	nextAttempt time.Time
+	ttl         time.Duration
 }
+
+const (
+	refreshBackoff = 10 * time.Second
+	maxJwksBytes   = 1 << 20
+)
 
 func NewVerifier(url string) *Verifier {
 	return &Verifier{
@@ -123,13 +131,25 @@ func (v *Verifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) 
 		return k, nil
 	}
 
+	// После сбоя не долбим auth на каждом запросе: без паузы недоступный
+	// auth превращается в ожидание таймаута на каждом вызове подряд.
+	if time.Now().Before(v.nextAttempt) {
+		if k, ok := v.lookup(kid); ok {
+			return k, nil
+		}
+		return nil, errors.New("jwks refresh backed off")
+	}
+
 	if err := v.refresh(ctx); err != nil {
+		v.nextAttempt = time.Now().Add(refreshBackoff)
 		// При живых старых ключах деградируем на них, но логируем сбой.
 		if v.hasAny() {
 			slog.Warn("jwks refresh failed, using cached keys", "err", err)
 		} else {
 			return nil, fmt.Errorf("jwks refresh: %w", err)
 		}
+	} else {
+		v.nextAttempt = time.Time{}
 	}
 
 	if k, ok := v.lookup(kid); ok {
@@ -179,7 +199,7 @@ func (v *Verifier) refresh(ctx context.Context) error {
 	var set struct {
 		Keys []jwk `json:"keys"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&set); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxJwksBytes)).Decode(&set); err != nil {
 		return err
 	}
 
