@@ -10,6 +10,10 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# Java / Maven
+**/target/
+*.class
+
 # Go
 .gocache/
 /bin/
