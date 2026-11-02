@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import uuid
@@ -27,6 +28,8 @@ from app.rag import (
 
 TOP_K = int(os.environ.get("TOP_K", "4"))
 MAX_UPLOAD = int(os.environ.get("MAX_UPLOAD_BYTES", str(5 << 20)))
+
+log = logging.getLogger("answer")
 
 ANSWERED = Counter("answer_total", "Answers by status", ["status"])
 REQUESTS = Counter("http_requests_total", "HTTP requests", ["method", "path", "status"])
@@ -87,14 +90,27 @@ async def observe(request: Request, call_next):
     incoming = request.headers.get("X-Request-ID", "")
     request.state.rid = incoming if incoming and len(incoming) <= 128 else uuid.uuid4().hex
     started = time.perf_counter()
-    response = await call_next(request)
-    # Шаблон маршрута, а не сырой путь: кардинальность метрик ограничена.
-    route = request.scope.get("route")
-    path = getattr(route, "path", None) or "__unmatched__"
-    LATENCY.labels(path).observe(time.perf_counter() - started)
-    response.headers["X-Request-ID"] = request.state.rid
-    REQUESTS.labels(request.method, path, str(response.status_code)).inc()
-    return response
+    response = None
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        # Метрики и request_id должны появиться и на 500: иначе отказ
+        # обработчика не виден ни в Prometheus, ни в логах клиента.
+        route = request.scope.get("route")
+        path = getattr(route, "path", None) or "__unmatched__"
+        status = response.status_code if response is not None else 500
+        LATENCY.labels(path).observe(time.perf_counter() - started)
+        REQUESTS.labels(request.method, path, str(status)).inc()
+        if response is not None:
+            response.headers["X-Request-ID"] = request.state.rid
+
+
+@app.exception_handler(Exception)
+async def unhandled(request: Request, exc: Exception) -> JSONResponse:
+    """Наружу — стабильный контракт ошибки, внутрь — стек в логе."""
+    log.exception("unhandled error: %s", exc)
+    return error(500, "INTERNAL", "Внутренняя ошибка", rid(request))
 
 
 @app.get("/healthz")
