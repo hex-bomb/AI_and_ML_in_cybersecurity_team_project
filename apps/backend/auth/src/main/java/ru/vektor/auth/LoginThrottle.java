@@ -3,6 +3,9 @@ package ru.vektor.auth;
 import java.time.Clock;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -10,14 +13,28 @@ import org.springframework.stereotype.Component;
 /**
  * Ограничитель попыток входа: скользящее окно на ключ (логин + IP).
  * Состояние in-memory и теряется при рестарте — для стенда приемлемо.
+ *
+ * <p>Вход неаутентифицирован, поэтому карта ключей ограничена: иначе перебор
+ * логинов превращает троттлинг в утечку памяти вплоть до OOM.
  */
 @Component
 public class LoginThrottle {
+
+    private static final Logger log = LoggerFactory.getLogger(
+        LoginThrottle.class
+    );
+
+    /** Предел числа окон: защита от роста карты при переборе уникальных логинов. */
+    static final int MAX_KEYS = 10_000;
+
+    /** Как часто убирать просроченные окна, чтобы они не копились между всплесками. */
+    private static final long SWEEP_EVERY = 1024;
 
     record Attempt(long windowStart, AtomicInteger count) {}
 
     private final ConcurrentHashMap<String, Attempt> attempts =
         new ConcurrentHashMap<>();
+    private final AtomicLong calls = new AtomicLong();
     private final int maxAttempts;
     private final long windowSeconds;
     private final Clock clock;
@@ -38,6 +55,9 @@ public class LoginThrottle {
 
     /** true — попытка разрешена, false — превышен лимит. */
     public boolean allowed(String key) {
+        if (calls.incrementAndGet() % SWEEP_EVERY == 0) {
+            prune();
+        }
         return state(key).count.get() < maxAttempts;
     }
 
@@ -50,8 +70,20 @@ public class LoginThrottle {
     }
 
     private Attempt state(String key) {
+        long now = clock.instant().getEpochSecond();
+        if (attempts.size() >= MAX_KEYS) {
+            prune();
+            if (attempts.size() >= MAX_KEYS) {
+                // Освобождаем память ценой сброса окон: доступность важнее
+                // удержания блокировки, которую иначе можно навязать извне.
+                log.warn(
+                    "login throttle: {} ключей, сбрасываем окна",
+                    attempts.size()
+                );
+                attempts.clear();
+            }
+        }
         return attempts.compute(key, (k, previous) -> {
-            long now = clock.instant().getEpochSecond();
             if (
                 previous == null ||
                 now - previous.windowStart() >= windowSeconds
@@ -66,5 +98,10 @@ public class LoginThrottle {
     void prune() {
         long cutoff = clock.instant().getEpochSecond() - windowSeconds;
         attempts.values().removeIf(a -> a.windowStart() < cutoff);
+    }
+
+    /** Текущее число окон — для диагностики и тестов. */
+    int size() {
+        return attempts.size();
     }
 }
