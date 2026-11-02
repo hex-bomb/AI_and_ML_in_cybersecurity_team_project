@@ -1,0 +1,92 @@
+rules:
+  - id: vektor-pii-email
+    languages: [generic]
+    severity: ERROR
+    message: "PII: адрес электронной почты в исходниках"
+    metadata:
+      category: pii
+    pattern-regex: '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}'
+    paths:
+      include:
+        - apps/**
+        - infra/**
+        - contracts/**
+      exclude:
+        - "**/node_modules/**"
+        - "**/dist/**"
+        - "**/__pycache__/**"
+        - contracts/postman/**
+
+  - id: vektor-pii-phone
+    languages: [generic]
+    severity: ERROR
+    message: "PII: номер телефона в исходниках"
+    metadata:
+      category: pii
+    pattern-regex: '\+7[\s(-]?\d{3}[\s)-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}'
+    paths:
+      include:
+        - apps/**
+        - infra/**
+      exclude:
+        - contracts/postman/**
+
+  - id: vektor-pii-document-number
+    languages: [generic]
+    severity: ERROR
+    message: "PII: номер паспорта или СНИЛС в исходниках"
+    metadata:
+      category: pii
+    pattern-either:
+      - pattern-regex: '\b\d{3}-\d{3}-\d{3}[ -]\d{2}\b'
+      - pattern-regex: '\b\d{2}\s\d{2}\s\d{6}\b'
+    paths:
+      include:
+        - apps/**
+
+  - id: vektor-secret-literal
+    languages: [generic]
+    severity: ERROR
+    message: "Critical: секрет литералом в коде"
+    metadata:
+      category: security
+    pattern-regex: '(?i)(password|passwd|secret|api[_-]?key|access[_-]?token)\s*[:=]\s*"[^"\s]{12,}"'
+    paths:
+      include:
+        - apps/**
+        - infra/**
+      exclude:
+        - infra/kubernetes/infrastructure/secrets-dev.yaml
+        - "**/tests/**"
+
+  - id: vektor-tls-verify-off
+    languages: [generic]
+    severity: ERROR
+    message: "Critical: отключена проверка TLS"
+    metadata:
+      category: security
+    pattern-either:
+      - pattern-regex: 'verify\s*=\s*False'
+      - pattern-regex: 'verify_ssl_certs\s*=\s*False'
+      - pattern-regex: 'InsecureSkipVerify\s*:\s*true'
+      - pattern-regex: "CERT_NONE"
+      - pattern-regex: 'curl\s+[^|]*\s-k\s'
+    paths:
+      include:
+        - apps/**
+        - infra/**
+
+  - id: vektor-unsafe-execution
+    languages: [generic]
+    severity: ERROR
+    message: "Critical: небезопасное выполнение кода или десериализация"
+    metadata:
+      category: security
+    pattern-either:
+      - pattern-regex: 'pickle\.loads\('
+      - pattern-regex: 'shell\s*=\s*True'
+      - pattern-regex: 'Runtime\.getRuntime\(\)\.exec\('
+      - pattern-regex: '\beval\('
+    paths:
+      include:
+        - apps/**

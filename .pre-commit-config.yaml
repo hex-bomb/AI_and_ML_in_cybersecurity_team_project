@@ -1,0 +1,52 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        files: ^(apps|infra|contracts|\.github)/
+      - id: check-json
+        files: ^contracts/
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+        files: ^(apps|infra|contracts|docs|scripts|\.semgrep|\.github)/
+      - id: trailing-whitespace
+        files: ^(apps|infra|contracts|docs|scripts|\.semgrep|\.github)/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(apps/backend|infra/scripts)/.*\.py$
+      - id: ruff-format
+        files: ^(apps/backend|infra/scripts)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: gofmt
+        name: gofmt
+        entry: gofmt -w
+        language: system
+        files: ^apps/backend/.*\.go$
+
+      - id: go-vet
+        name: go vet
+        entry: bash -c 'cd apps/backend/retrieval && go vet ./...'
+        language: system
+        pass_filenames: false
+        files: ^apps/backend/retrieval/.*\.go$
+
+      - id: contracts
+        name: openapi + postman + router
+        entry: python3 scripts/check-contracts.py
+        language: system
+        pass_filenames: false
+        files: ^(contracts|infra/nginx)/
+
+      - id: semgrep
+        name: semgrep critical + PII
+        entry: semgrep --config .semgrep --severity=ERROR --error --metrics=off --quiet
+        language: system
+        pass_filenames: false
+        files: ^apps/

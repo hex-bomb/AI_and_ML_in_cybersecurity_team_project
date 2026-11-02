@@ -1,0 +1,224 @@
+{
+ "info": {
+  "name": "Vektor platform",
+  "description": "Микросервисная версия демо: auth, search, answers, documents.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "variable": [
+  {
+   "key": "baseUrl",
+   "value": "http://localhost:8080"
+  },
+  {
+   "key": "kbId",
+   "value": "74ade984-591f-4382-a051-ef1898855868"
+  },
+  {
+   "key": "documentId",
+   "value": "internal-pricing"
+  }
+ ],
+ "item": [
+  {
+   "name": "auth",
+   "item": [
+    {
+     "name": "login (employee)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\":\"employee\",\"password\":\"employee\"}"
+      },
+      "url": "{{baseUrl}}/api/v1/auth/login"
+     }
+    },
+    {
+     "name": "login (user)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\":\"user\",\"password\":\"user\"}"
+      },
+      "url": "{{baseUrl}}/api/v1/auth/login"
+     }
+    },
+    {
+     "name": "me",
+     "request": {
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/auth/me"
+     }
+    },
+    {
+     "name": "logout",
+     "request": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/auth/logout"
+     }
+    },
+    {
+     "name": "jwks",
+     "request": {
+      "method": "GET",
+      "url": "{{baseUrl}}/.well-known/jwks.json"
+     }
+    }
+   ]
+  },
+  {
+   "name": "knowledge",
+   "item": [
+    {
+     "name": "search",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\"kb_id\":\"{{kbId}}\",\"query\":\"гарантия на станки\",\"top_k\":3}"
+      },
+      "url": "{{baseUrl}}/api/v1/search"
+     }
+    },
+    {
+     "name": "search (internal only)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\"kb_id\":\"{{kbId}}\",\"query\":\"внутренний прайс скидки маржа\",\"top_k\":5}"
+      },
+      "url": "{{baseUrl}}/api/v1/search"
+     }
+    },
+    {
+     "name": "answer",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\"kb_id\":\"{{kbId}}\",\"question\":\"какая гарантия на станки?\",\"history\":[]}"
+      },
+      "url": "{{baseUrl}}/api/v1/answers"
+     }
+    },
+    {
+     "name": "answer with history",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\"kb_id\":\"{{kbId}}\",\"question\":\"а на лизинг?\",\"history\":[{\"role\":\"user\",\"text\":\"какая гарантия на станки?\"},{\"role\":\"assistant\",\"text\":\"24 месяца.\"}]}"
+      },
+      "url": "{{baseUrl}}/api/v1/answers"
+     }
+    },
+    {
+     "name": "answer by file",
+     "request": {
+      "method": "POST",
+      "body": {
+       "mode": "formdata",
+       "formdata": [
+        {
+         "key": "file",
+         "type": "file",
+         "src": ""
+        },
+        {
+         "key": "question",
+         "type": "text",
+         "value": "о чём этот документ?"
+        }
+       ]
+      },
+      "url": "{{baseUrl}}/api/v1/answers/file"
+     }
+    }
+   ]
+  },
+  {
+   "name": "documents",
+   "item": [
+    {
+     "name": "list",
+     "request": {
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/documents"
+     }
+    },
+    {
+     "name": "upload",
+     "request": {
+      "method": "POST",
+      "body": {
+       "mode": "formdata",
+       "formdata": [
+        {
+         "key": "file",
+         "type": "file",
+         "src": ""
+        },
+        {
+         "key": "title",
+         "type": "text",
+         "value": "Мануал по станку"
+        },
+        {
+         "key": "audience",
+         "type": "text",
+         "value": "employee"
+        }
+       ]
+      },
+      "url": "{{baseUrl}}/api/v1/documents"
+     }
+    },
+    {
+     "name": "source",
+     "request": {
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/documents/{{documentId}}/source"
+     }
+    }
+   ]
+  }
+ ]
+}

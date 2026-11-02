@@ -1,0 +1,3 @@
+# Зависимости сайта документации.
+# Установка: pip install -r docs/requirements-docs.txt
+mkdocs-material>=9.5,<10

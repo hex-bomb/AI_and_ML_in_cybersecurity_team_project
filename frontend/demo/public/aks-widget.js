@@ -1,1 +1,0 @@
-../../widget/aks-widget.js

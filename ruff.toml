@@ -1,0 +1,17 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "ASYNC", "S", "RUF"]
+ignore = [
+    "E501",
+    "B008",
+    "S101",
+    "S104",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[lint.per-file-ignores]
+"infra/scripts/*" = ["S310", "S603", "S607"]

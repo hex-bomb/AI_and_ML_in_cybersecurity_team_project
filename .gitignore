@@ -1,60 +1,36 @@
-# ── Секреты и локальная конфигурация ────────────────────────────
-# Рабочие ключи и адреса инфраструктуры не коммитим (ТЗ раздел 9).
-# Примеры с безопасными значениями — под .env.example — обязаны быть в репозитории.
-.env
-.env.local
-.env.*.local
-!.env.example
+.DS_Store
+*.log
 
-# ── Python ─────────────────────────────────────────────────────
-.venv/
-venv/
+# Python
 __pycache__/
 *.py[cod]
-*.egg-info/
+.venv/
+venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-.coverage
-coverage.*
-htmlcov/
 
-# ── Node и сборка фронтенда ─────────────────────────────────────
+# Go
+.gocache/
+/bin/
+
+# Node
 node_modules/
 dist/
-build/
 *.tsbuildinfo
 .vite/
 
-# ── Данные времени выполнения ───────────────────────────────────
-# Общий том FileStorage: оригиналы загруженных документов и ParsedDocument.
-# Восстанавливается повторной загрузкой, в репозитории не хранится.
-backend/var/
-var/
+# Модель эмбеддингов: веса не в git
+apps/backend/embedding/models/
 
-# ── Служебное окружение агентов ─────────────────────────────────
-# Ставится через `npx skills add`; состав фиксируется в skills-lock.json,
-# сами skill-файлы — сторонний код, который не должен попадать в историю.
-.agents/
+# Сгенерированное
+.site/
+site/
 
-# ── ОС и редакторы ─────────────────────────────────────────────
-.DS_Store
-.DS_Store?
-._*
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-*.swo
-*.orig
-*.rej
+# Локальные секреты
+.env
+.env.local
+*.local
 
-# ── Логи ───────────────────────────────────────────────────────
-*.log
-logs/
-# Собранные бинари Go
-backend/bin/
-# Локальные сборки и черновики вне Makefile
-/backend/go/worker
-/backend/go/api
-/backend/go/tmp-ping/
+# Скомпилированный бинарник Go-сервиса (сборка локально)
+apps/backend/retrieval/retrieval

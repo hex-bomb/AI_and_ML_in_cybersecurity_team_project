@@ -1,0 +1,74 @@
+# Сайт документации «ВЕКТОР».
+#
+#   pip install -r docs/requirements-docs.txt
+#   mkdocs serve -f docs/mkdocs.yml -a 127.0.0.1:8001
+
+site_name: ВЕКТОР
+site_description: Чат по базе знаний с ролями, гибридным поиском и записью через диалог
+docs_dir: .
+site_dir: ../.site
+
+theme:
+  name: material
+  language: ru
+  features:
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Тёмная тема
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Светлая тема
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Главная: index.md
+  - Архитектура: architecture/overview.md
+  - Сервисы:
+      - auth: services/auth.md
+      - documents: services/documents.md
+      - retrieval: services/retrieval.md
+      - answer: services/answer.md
+      - embedding: services/embedding.md
+      - ingest: services/ingest.md
+  - Фронтенд:
+      - web-app: frontend/web-app.md
+      - widget: frontend/widget.md
+  - Инфраструктура:
+      - Kafka: infrastructure/kafka.md
+      - Docker Compose: infrastructure/docker-compose.md
+  - Справочник:
+      - API: reference/api.md
+      - Глоссарий: glossary.md
+  - Окружения:
+      - Локальная разработка: environments/local-development.md

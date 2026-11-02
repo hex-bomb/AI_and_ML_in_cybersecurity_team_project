@@ -1,0 +1,14 @@
+ru/vektor/docs/TokenVerifier$Claims.class
+ru/vektor/docs/Errors$AppError.class
+ru/vektor/docs/DocumentRepository$Version.class
+ru/vektor/docs/DocumentRepository$Entry.class
+ru/vektor/docs/ObsFilter.class
+ru/vektor/docs/Events.class
+ru/vektor/docs/DocumentRepository$Source.class
+ru/vektor/docs/TokenVerifier.class
+ru/vektor/docs/Errors.class
+ru/vektor/docs/Api.class
+ru/vektor/docs/Api$IngestRequest.class
+ru/vektor/docs/DocumentsApplication.class
+ru/vektor/docs/DocumentRepository.class
+ru/vektor/docs/Extract.class

@@ -1,0 +1,18 @@
+# CODEOWNERS
+
+Замените `@vektor-maintainers` на реальную команду или логины GitHub.
+
+*                       @vektor-maintainers
+
+/apps/backend/auth/     @vektor-maintainers
+/apps/backend/documents/ @vektor-maintainers
+/apps/backend/retrieval/ @vektor-maintainers
+/apps/backend/answer/    @vektor-maintainers
+/apps/backend/embedding/ @vektor-maintainers
+/apps/backend/ingest/    @vektor-maintainers
+/apps/frontend/         @vektor-maintainers
+
+/contracts/             @vektor-maintainers
+/infra/                 @vektor-maintainers
+/.github/               @vektor-maintainers
+/docs/                  @vektor-maintainers

@@ -1,0 +1,19 @@
+{
+  "name": "aks-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "web-app",
+    "widget"
+  ],
+  "scripts": {
+    "dev:widget": "npm run dev --workspace @aks/widget",
+    "dev:web-app": "npm run dev --workspace @aks/web-app",
+    "build:widget": "npm run build --workspace @aks/widget",
+    "build:web-app": "npm run build --workspace @aks/web-app",
+    "build": "npm run build:widget && npm run build:web-app",
+    "typecheck": "npm run typecheck --workspace @aks/widget && npm run typecheck --workspace @aks/web-app",
+    "lint": "npm run lint --workspace @aks/widget && npm run lint --workspace @aks/web-app"
+  }
+}

@@ -1,0 +1,60 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: vektor-auth
+  config:
+    # Без импорта Spring Cloud Vault не читает spring.cloud.vault.*
+    import: optional:vault://
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vektor_auth}
+    username: ${SPRING_DATASOURCE_USERNAME:vektor}
+    password: ${db.password:vektor-dev}
+  flyway:
+    enabled: true
+    create-schemas: true
+  jackson:
+    default-property-inclusion: non_null
+    property-naming-strategy: SNAKE_CASE
+  cloud:
+    vault:
+      uri: ${SPRING_CLOUD_VAULT_URI:http://localhost:8200}
+      token: ${SPRING_CLOUD_VAULT_TOKEN:root}
+      fail-fast: false
+      kv:
+        enabled: true
+        backend: secret
+        default-context: vektor
+        backend-version: 2
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+auth:
+  tenant-id: ${AUTH_TENANT_ID:11111111-1111-4111-8111-111111111111}
+  kb-id: ${AUTH_KB_ID:74ade984-591f-4382-a051-ef1898855868}
+  session-ttl: ${AUTH_SESSION_TTL:28800}
+  # Практически бессрочный токен, только для сервисного аккаунта admin
+  admin-session-ttl: ${AUTH_ADMIN_SESSION_TTL:3153600000}
+  # Сиды демо-пользователей (user/employee/admin) идут только с профилем dev
+  throttle-max-attempts: ${AUTH_THROTTLE_MAX_ATTEMPTS:5}
+  throttle-window-seconds: ${AUTH_THROTTLE_WINDOW_SECONDS:300}
+  cookie-name: vektor_session
+  cookie-secure: ${AUTH_COOKIE_SECURE:false}
+  issuer: vektor-auth
+  key-id: vektor-1
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

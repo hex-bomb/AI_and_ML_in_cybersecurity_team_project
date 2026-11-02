@@ -1,0 +1,502 @@
+openapi: 3.0.3
+info:
+  title: Vektor platform API
+  version: 1.0.0
+  description: |
+    Публичный контракт микросервисной версии демо «ВЕКТОР».
+    Сессия — JWT в httpOnly cookie `vektor_session`; заголовок Authorization
+    поддерживается для служебных вызовов между сервисами.
+servers:
+  - url: http://localhost:8080
+    description: входной router (docker-compose)
+tags:
+  - name: auth
+  - name: knowledge
+  - name: documents
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Вход, выдаёт cookie сессии
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Пользователь и идентификатор запроса
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Выход, удаляет cookie
+      responses:
+        "204":
+          description: Cookie удалена
+  /api/v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Текущий пользователь
+      responses:
+        "200":
+          description: Пользователь из подписанного токена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /.well-known/jwks.json:
+    get:
+      tags: [auth]
+      summary: Публичный ключ подписи
+      responses:
+        "200":
+          description: JWKS
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kty: { type: string }
+                        kid: { type: string }
+                        n: { type: string }
+                        e: { type: string }
+  /api/v1/search:
+    post:
+      tags: [knowledge]
+      summary: Гибридный поиск фрагментов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: Фрагменты после фильтра прав
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/answers:
+    post:
+      tags: [knowledge]
+      summary: Ответ по базе знаний с проверенными цитатами
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerRequest"
+      responses:
+        "200":
+          description: Ответ и цитаты
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/answers/file:
+    post:
+      tags: [knowledge]
+      summary: Ответ по загруженному файлу
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, question]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                question:
+                  type: string
+                  maxLength: 4000
+      responses:
+        "200":
+          description: Ответ и цитаты по файлу
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileAnswerResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/documents:
+    get:
+      tags: [documents]
+      summary: Список документов базы (сотрудник)
+      responses:
+        "200":
+          description: Документы
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [documents]
+      summary: Загрузка документа (сотрудник)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                  maxLength: 300
+                audience:
+                  type: string
+                  enum: [public, employee]
+                  default: public
+      responses:
+        "201":
+          description: Документ принят, индексация асинхронная
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+  /api/v1/documents/{documentId}/source:
+    get:
+      tags: [documents]
+      summary: Исходный текст документа
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Полный текст
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, maxLength: 100 }
+        password: { type: string, maxLength: 200 }
+    User:
+      type: object
+      required: [id, name, role]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [user, employee] }
+    LoginResponse:
+      type: object
+      required: [user, request_id]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        request_id: { type: string }
+    MeResponse:
+      type: object
+      required: [user, request_id]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        request_id: { type: string }
+    Locator:
+      type: object
+      properties:
+        block_ids:
+          type: array
+          items: { type: string }
+        section_path:
+          type: array
+          items: { type: string }
+        page_start:
+          type: integer
+          nullable: true
+        page_end:
+          type: integer
+          nullable: true
+    SearchRequest:
+      type: object
+      required: [kb_id]
+      properties:
+        kb_id: { type: string, maxLength: 64 }
+        query: { type: string, maxLength: 1000, default: "" }
+        top_k: { type: integer, minimum: 1, maximum: 10, default: 5 }
+    SearchHit:
+      type: object
+      required:
+        [
+          chunk_id,
+          document_id,
+          version_id,
+          title,
+          text,
+          locator,
+          download_url,
+          score,
+        ]
+      properties:
+        chunk_id: { type: string }
+        document_id: { type: string }
+        version_id: { type: string }
+        title: { type: string }
+        text: { type: string }
+        locator:
+          $ref: "#/components/schemas/Locator"
+        source_url:
+          type: string
+          nullable: true
+        download_url: { type: string }
+        score: { type: number }
+    SearchResponse:
+      type: object
+      required: [status, hits, request_id]
+      properties:
+        status:
+          type: string
+          enum: [ok, no_results]
+        hits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+        request_id: { type: string }
+    AnswerTurn:
+      type: object
+      required: [role, text]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        text: { type: string, maxLength: 1000 }
+    AnswerRequest:
+      type: object
+      required: [kb_id, question]
+      properties:
+        kb_id: { type: string, maxLength: 64 }
+        question: { type: string, maxLength: 4000 }
+        history:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/AnswerTurn"
+    Citation:
+      type: object
+      required:
+        [
+          number,
+          chunk_id,
+          document_id,
+          version_id,
+          title,
+          quote,
+          locator,
+          download_url,
+        ]
+      properties:
+        number: { type: integer }
+        chunk_id: { type: string }
+        document_id: { type: string }
+        version_id: { type: string }
+        title: { type: string }
+        quote: { type: string }
+        locator:
+          $ref: "#/components/schemas/Locator"
+        source_url:
+          type: string
+          nullable: true
+        download_url: { type: string }
+    AnswerResponse:
+      type: object
+      required: [status, answer, citations, request_id]
+      properties:
+        status:
+          type: string
+          enum: [ok, no_evidence]
+        answer: { type: string }
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Citation"
+        request_id: { type: string }
+    FileCitation:
+      type: object
+      required: [number, filename, quote, locator]
+      properties:
+        number: { type: integer }
+        filename: { type: string }
+        quote: { type: string }
+        locator:
+          $ref: "#/components/schemas/Locator"
+    FileAnswerResponse:
+      type: object
+      required: [status, answer, citations, request_id]
+      properties:
+        status:
+          type: string
+          enum: [ok, no_evidence]
+        answer: { type: string }
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileCitation"
+        request_id: { type: string }
+    UploadResponse:
+      type: object
+      required: [document_id, version_id, created, request_id]
+      properties:
+        document_id: { type: string }
+        version_id: { type: string }
+        created:
+          type: boolean
+          description: true — создана новая версия, false — текст не изменился
+        request_id: { type: string }
+    DocumentEntry:
+      type: object
+      properties:
+        document_id: { type: string }
+        title: { type: string }
+        audience: { type: string, enum: [public, employee] }
+        section: { type: string }
+        versions: { type: integer }
+    DocumentList:
+      type: object
+      required: [documents, request_id]
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentEntry"
+        request_id: { type: string }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+    ErrorEnvelope:
+      type: object
+      required: [error, request_id]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
+        request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: Нет или истекла сессия
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Forbidden:
+      description: Нет прав или запрос отклонён классификатором
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Ресурс недоступен или не существует
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    TooLarge:
+      description: Файл или тело больше лимита
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    RateLimited:
+      description: Превышен лимит частоты
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    BadGateway:
+      description: Некорректный ответ модели
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unavailable:
+      description: Зависимость недоступна
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"

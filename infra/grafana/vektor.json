@@ -1,0 +1,46 @@
+{
+  "uid": "vektor",
+  "title": "Vektor",
+  "timezone": "browser",
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "time": {"from": "now-30m", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "RPS by service",
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [{"expr": "sum by (job) (rate(http_requests_total[$__rate_interval]))", "legendFormat": "{{job}}"}]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "5xx rate",
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [{"expr": "sum by (job) (rate(http_requests_total{status=~\"5..\"}[$__rate_interval]))", "legendFormat": "{{job}}"}]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Avg latency, s",
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [{"expr": "sum by (job) (rate(http_request_duration_seconds_sum[$__rate_interval])) / sum by (job) (rate(http_request_duration_seconds_count[$__rate_interval]))", "legendFormat": "{{job}}"}]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "JVM heap",
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{"expr": "sum by (job, area) (jvm_memory_used_bytes{job=~\"auth|documents\"})", "legendFormat": "{{job}}"}]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Ingested documents",
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "targets": [{"expr": "sum(rate(ingest_documents_total[$__rate_interval]))", "legendFormat": "docs/s"}]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Answers by status",
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "targets": [{"expr": "sum by (status) (rate(answer_total[$__rate_interval]))", "legendFormat": "{{status}}"}]
+    }
+  ]
+}

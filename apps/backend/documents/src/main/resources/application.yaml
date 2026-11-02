@@ -1,0 +1,68 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: vektor-documents
+  config:
+    # Без импорта Spring Cloud Vault не читает spring.cloud.vault.*
+    import: optional:vault://
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vektor_docs}
+    username: ${SPRING_DATASOURCE_USERNAME:vektor}
+    password: ${db.password:vektor-dev}
+  flyway:
+    enabled: true
+    create-schemas: true
+  jackson:
+    default-property-inclusion: non_null
+    property-naming-strategy: SNAKE_CASE
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+  cloud:
+    vault:
+      uri: ${SPRING_CLOUD_VAULT_URI:http://localhost:8200}
+      token: ${SPRING_CLOUD_VAULT_TOKEN:root}
+      fail-fast: false
+      kv:
+        enabled: true
+        backend: secret
+        default-context: vektor
+        backend-version: 2
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+documents:
+  topic: ${DOCUMENTS_TOPIC:kb.document.upserted}
+  max-upload-bytes: ${MAX_UPLOAD_BYTES:5242880}
+  jwks-url: ${JWKS_URL:http://auth:80/.well-known/jwks.json}
+  default-kb: ${AUTH_KB_ID:74ade984-591f-4382-a051-ef1898855868}
+  # Общий секрет для /internal/*: входной router эти пути не маршрутизирует,
+  # токен — защита приложения поверх этого.
+  # Пустое значение запрещает все внутренние вызовы (fail closed).
+  internal-token: ${DOCUMENTS_INTERNAL_TOKEN:}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

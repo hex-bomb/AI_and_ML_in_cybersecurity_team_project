@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: auth
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["auth:8080"]
+  - job_name: documents
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["documents:8080"]
+  - job_name: retrieval
+    static_configs:
+      - targets: ["retrieval:8080"]
+  - job_name: answer
+    static_configs:
+      - targets: ["answer:8000"]
+  - job_name: embedding
+    static_configs:
+      - targets: ["embedding:8000"]
+  - job_name: ingest
+    static_configs:
+      - targets: ["ingest:8000"]

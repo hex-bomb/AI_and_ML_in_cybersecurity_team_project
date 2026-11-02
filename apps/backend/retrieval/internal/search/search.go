@@ -1,0 +1,190 @@
+// Package search — ядро гибридного поиска: запросы к Elasticsearch и слияние RRF.
+// Без I/O и глобального состояния: всё принимается параметрами, результат — значения.
+package search
+
+import "sort"
+
+const (
+	// rrfK — постоянная сглаживания RRF: 60 зарекомендовано оригинальными авторами.
+	rrfK = 60
+	// candidates — минимум кандидатов для knn, чтобы recall не падал на коротких запросах.
+	candidates = 100
+)
+
+// Hit — один фрагмент в ответе наружу.
+type Hit struct {
+	ChunkID     string  `json:"chunk_id"`
+	DocumentID  string  `json:"document_id"`
+	VersionID   string  `json:"version_id"`
+	Title       string  `json:"title"`
+	Text        string  `json:"text"`
+	Locator     Locator `json:"locator"`
+	SourceURL   *string `json:"source_url"`
+	DownloadURL string  `json:"download_url"`
+	Score       float64 `json:"score"`
+}
+
+// Locator — где фрагмент лежит в исходном документе.
+type Locator struct {
+	BlockIDs    []string `json:"block_ids"`
+	SectionPath []string `json:"section_path"`
+	PageStart   *int     `json:"page_start"`
+	PageEnd     *int     `json:"page_end"`
+}
+
+// Scope — база знаний и аудитории, которым разрешён поиск.
+type Scope struct {
+	KB        string
+	Audiences []string
+}
+
+// Size — сколько кандидатов запрашивать у каждой системы поиска.
+func Size(topK int) int {
+	return max(topK*3, 10)
+}
+
+// scopeFilter — общий фильтр по kb и аудиториям для lexical и knn.
+func scopeFilter(s Scope) []any {
+	return []any{
+		map[string]any{"term": map[string]any{"kb_id": s.KB}},
+		map[string]any{"terms": map[string]any{"audience": s.Audiences}},
+	}
+}
+
+// LexicalBody — тело запроса BM25 по заголовку и тексту.
+func LexicalBody(s Scope, query string, size int) map[string]any {
+	return map[string]any{
+		"size":    size,
+		"_source": map[string]any{"excludes": []string{"embedding"}},
+		"query": map[string]any{"bool": map[string]any{
+			"must": []any{map[string]any{"multi_match": map[string]any{
+				"query":  query,
+				"fields": []string{"title^3", "text"},
+				"type":   "best_fields",
+			}}},
+			"filter": scopeFilter(s),
+		}},
+	}
+}
+
+// KnnBody — тело запроса kNN по вектору.
+func KnnBody(s Scope, vector []float64, size int) map[string]any {
+	return map[string]any{
+		"size":    size,
+		"_source": map[string]any{"excludes": []string{"embedding"}},
+		"knn": map[string]any{
+			"field":          "embedding",
+			"query_vector":   vector,
+			"k":              size,
+			"num_candidates": max(candidates, size*10),
+			"filter":         map[string]any{"bool": map[string]any{"filter": scopeFilter(s)}},
+		},
+	}
+}
+
+// Fused — результат слияния до отображения в Hit.
+type Fused struct {
+	ID    string
+	Score float64
+}
+
+// RRF объединяет несколько ранжировок reciprocal rank fusion.
+// tie-break — по порядку первого появления, чтобы выдача была стабильной.
+func RRF(rankings [][]string, limit int) []Fused {
+	scores := map[string]float64{}
+	firstSeen := map[string]int{}
+
+	for _, ranking := range rankings {
+		for i, id := range ranking {
+			scores[id] += 1.0 / float64(rrfK+i+1)
+			if _, ok := firstSeen[id]; !ok {
+				firstSeen[id] = len(firstSeen)
+			}
+		}
+	}
+
+	out := make([]Fused, 0, len(scores))
+	for id, score := range scores {
+		out = append(out, Fused{ID: id, Score: score})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Score != out[j].Score {
+			return out[i].Score > out[j].Score
+		}
+		return firstSeen[out[i].ID] < firstSeen[out[j].ID]
+	})
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
+// ToHit отображает документ Elasticsearch в наружный Hit.
+func ToHit(src map[string]any, score float64) Hit {
+	documentID := str(src["document_id"])
+	return Hit{
+		ChunkID:    str(src["chunk_id"]),
+		DocumentID: documentID,
+		VersionID:  str(src["version_id"]),
+		Title:      str(src["title"]),
+		Text:       str(src["text"]),
+		Locator: Locator{
+			BlockIDs:    []string{},
+			SectionPath: stringsOf(src["section_path"]),
+			PageStart:   intPtr(src["page_start"]),
+			PageEnd:     intPtr(src["page_end"]),
+		},
+		DownloadURL: "/api/v1/documents/" + documentID + "/source",
+		Score:       score,
+	}
+}
+
+// MergeSources сливает источники из нескольких выдач: позже переопределяет раньше.
+func MergeSources(groups ...map[string]map[string]any) map[string]map[string]any {
+	out := map[string]map[string]any{}
+	for _, group := range groups {
+		for id, doc := range group {
+			out[id] = doc
+		}
+	}
+	return out
+}
+
+// Rankings собирает только непустые ранжировки: пустая не должна тянуть score.
+func Rankings(groups ...[]string) [][]string {
+	out := make([][]string, 0, len(groups))
+	for _, group := range groups {
+		if len(group) > 0 {
+			out = append(out, group)
+		}
+	}
+	return out
+}
+
+func str(v any) string {
+	s, _ := v.(string)
+	return s
+}
+
+func stringsOf(v any) []string {
+	raw, ok := v.([]any)
+	if !ok {
+		return []string{}
+	}
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func intPtr(v any) *int {
+	f, ok := v.(float64)
+	if !ok {
+		return nil
+	}
+	n := int(f)
+	return &n
+}

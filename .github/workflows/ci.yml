@@ -1,18 +1,36 @@
-# Непрерывные проверки Go-модуля и интеграционные тесты против настоящих
-# Postgres и Elasticsearch.
-#
-# Локально `make check` закрывает всё, кроме интеграционных тестов: без
-# поднятых сервисов они молча пропускаются (это осознанное поведение — см.
-# комментарии в schema_test.go и elasticsearch_integration_test.go). CI
-# поднимает сервисы, поэтому здесь пропусков быть не должно: отдельный шаг
-# падает, если тесты были пропущены, а не пройдены.
-
 name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
+    paths:
+      - "apps/**"
+      - "contracts/**"
+      - "infra/**"
+      - "docs/**"
+      - "scripts/**"
+      - ".semgrep/**"
+      - "docker-compose.yml"
+      - ".env.example"
+      - ".github/workflows/ci.yml"
+      - "Makefile"
+      - "ruff.toml"
+      - ".pre-commit-config.yaml"
   pull_request:
+    paths:
+      - "apps/**"
+      - "contracts/**"
+      - "infra/**"
+      - "docs/**"
+      - "scripts/**"
+      - ".semgrep/**"
+      - "docker-compose.yml"
+      - ".env.example"
+      - ".github/workflows/ci.yml"
+      - "Makefile"
+      - "ruff.toml"
+      - ".pre-commit-config.yaml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,124 +39,93 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: backend/go
-
 jobs:
-  check:
-    name: make check (fmt, vet, build, contract, unit, lint)
+  python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-python@v5
         with:
-          go-version: '1.27.0'
-          cache-dependency-path: backend/go/go.sum
+          python-version: "3.12"
+      - run: pip install ruff==0.6.9 pytest==8.3.3 pyyaml==6.0.2 httpx==0.27.2 fastapi==0.115.0
+      - run: ruff check apps/backend infra/scripts
+      - run: ruff format --check apps/backend infra/scripts
+      - run: python -m pytest apps/backend/answer/tests -q
+      - run: python -m pytest apps/backend/ingest/tests -q
+      - run: python scripts/check-contracts.py
 
-      - name: Установить golangci-lint
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-
-      - name: make check
-        run: make check
-
-      - name: make cover
-        run: make cover
-
-  integration:
-    name: интеграционные тесты (postgres + elasticsearch)
+  go:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: kb_go_test
-          POSTGRES_USER: kb
-          POSTGRES_PASSWORD: dev
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U kb -d kb_go_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-      elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:8.17.3
-        env:
-          discovery.type: single-node
-          xpack.security.enabled: 'false'
-          ingest.geoip.downloader.enabled: 'false'
-          ES_JAVA_OPTS: -Xms1g -Xmx1g
-        ports:
-          - 9200:9200
-        options: >-
-          --health-cmd "curl -sf http://localhost:9200/_cluster/health || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 30
-    env:
-      KB_GO_TEST_DATABASE_URL: postgres://kb:dev@127.0.0.1:5432/kb_go_test?sslmode=disable
-      ELASTICSEARCH_TEST_URL: http://127.0.0.1:9200
+    defaults:
+      run:
+        working-directory: apps/backend/retrieval
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.27.0'
-          cache-dependency-path: backend/go/go.sum
+          go-version: "1.23"
+      - run: go build ./...
+      - run: go vet ./...
+      - run: test -z "$(gofmt -l .)"
+      - run: go test -race ./...
 
-      # Путь к пакетам исправлен: internal/infrastructure переехал в
-      # internal/store после перестройки, и старый шаблон молча ничего не
-      # запускал — ворота §9 «права» считались закрытыми без единого теста.
-      - name: Тесты хранилищ и ворот
-        run: go test -race -count=1 -timeout 20m ./internal/store/... ./internal/arch/...
+  java:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, documents]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: mvn -B -q test package
+        working-directory: apps/backend/${{ matrix.service }}
 
-      # Допустим ровно один пропуск — тот самый тест ворот удаления, который
-      # по устройству запускается отдельным шагом ниже и здесь обязан
-      # пропустить. Раньше шаг не знал про это исключение и падал на нём:
-      # проверка «пропусков быть не должно» и «ворота требуют отдельного
-      # стенда» противоречили друг другу.
-      #
-      # Список исключений не разрастается молча: новый пропуск сюда не
-      # попадёт и уронит сборку, как и должен.
-      - name: Пропусков быть не должно (кроме ворот удаления)
-        run: |
-          set -o pipefail
-          ALLOWED='TestУдалениеДокументаИсчезаетИзВыдачиНаКластере'
-          go test -count=1 -timeout 20m -v ./internal/store/... ./internal/arch/... \
-            | tee /tmp/integration.log >/dev/null
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r docs/requirements-docs.txt
+      - run: mkdocs build --strict -f docs/mkdocs.yml
 
-          # Считаем все пропуски и вычитаем допустимые по имени теста.
-          total=$(grep -c -- '--- SKIP' /tmp/integration.log || true)
-          allowed=$(grep -- '--- SKIP' /tmp/integration.log | grep -c -F "$ALLOWED" || true)
-          unexpected=$((total - allowed))
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install semgrep==1.94.0
+      - run: semgrep --config .semgrep --severity=ERROR --error --metrics=off
 
-          echo "пропусков всего: $total, из них допустимых ($ALLOWED): $allowed"
-          if [ "$allowed" -gt 1 ]; then
-            echo "::error::ворота удаления не должны пропускаться более одного раза"
-            exit 1
-          fi
-          if [ "$unexpected" -ne 0 ]; then
-            echo "::error::интеграционные тесты были пропущены ($unexpected шт.) — проверь сервисы и переменные"
-            grep -- '--- SKIP' /tmp/integration.log | grep -v -F "$ALLOWED" | head -40
-            exit 1
-          fi
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config -q
+      - run: docker compose build
 
-      # Ворота «Удаление» на живом индексе идут отдельным шагом намеренно:
-      # dropProfileIndices в cleanup интеграционных тестов internal/store/es
-      # удаляет все индексы kb-chunks-*, и в общем прогоне (пакеты идут
-      # параллельно) индекс ворот пропадает между записью и поиском. Поэтому
-      # тест требует явного KB_GO_GATES_CLUSTER и изолированного прогона.
-      - name: Ворота удаления на живом индексе
-        env:
-          KB_GO_GATES_CLUSTER: '1'
-        run: |
-          go test -count=1 -timeout 10m -v \
-            -run TestУдалениеДокументаИсчезаетИзВыдачиНаКластере ./internal/arch/ \
-            | tee /tmp/gates.log >/dev/null
-          if grep -q -- '--- SKIP' /tmp/gates.log; then
-            echo "::error::ворота удаления пропущены — ворота §9 «удаление» не закрыты"
-            grep -- '--- SKIP' -A2 /tmp/gates.log | head -40
-            exit 1
-          fi
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  security:
