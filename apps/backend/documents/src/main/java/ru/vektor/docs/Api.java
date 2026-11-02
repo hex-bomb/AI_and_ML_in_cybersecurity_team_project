@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -24,8 +25,11 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 public class Api {
 
-    private static final String COOKIE = "vektor_session";
     private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
+    // Список документов отдаётся порциями: без предела один большой kb
+    // гарантирует тяжёлый ответ и лишнюю память на каждом запросе.
+    private static final int DEFAULT_LIST_LIMIT = 100;
+    private static final int MAX_LIST_LIMIT = 500;
 
     public record IngestRequest(
         String kbId,
@@ -43,6 +47,7 @@ public class Api {
     private final Events events;
     private final String internalToken;
     private final long maxBytes;
+    private final int maxTextChars;
     private final String defaultKb;
 
     public Api(
@@ -52,6 +57,7 @@ public class Api {
         Events events,
         @Value("${documents.internal-token:}") String internalToken,
         @Value("${documents.max-upload-bytes}") long maxBytes,
+        @Value("${documents.max-text-chars:2000000}") int maxTextChars,
         @Value("${documents.default-kb}") String defaultKb
     ) {
         this.documents = documents;
@@ -60,6 +66,7 @@ public class Api {
         this.events = events;
         this.internalToken = internalToken;
         this.maxBytes = maxBytes;
+        this.maxTextChars = maxTextChars;
         this.defaultKb = defaultKb;
     }
 
@@ -75,12 +82,18 @@ public class Api {
             required = false,
             defaultValue = "public"
         ) String audience,
-        @CookieValue(name = COOKIE, required = false) String token,
+        @CookieValue(
+            name = "${auth.cookie-name:vektor_session}",
+            required = false
+        ) String token,
         HttpServletRequest request
     ) throws Exception {
         var claims = auth.verify(token);
         if (!claims.employee()) {
             throw Errors.forbidden();
+        }
+        if (file == null || file.isEmpty()) {
+            throw Errors.badRequest("нужен файл");
         }
         var content = file.getBytes();
         if (content.length > maxBytes) {
@@ -98,7 +111,7 @@ public class Api {
             claims.kb(),
             externalId,
             clip(name, 300),
-            audience,
+            audience(audience),
             "Загружено",
             text,
             "upload"
@@ -108,7 +121,7 @@ public class Api {
             claims.kb(),
             externalId,
             version.id().toString(),
-            audience,
+            audience(audience),
             name,
             version.sha256()
         );
@@ -129,17 +142,26 @@ public class Api {
 
     @GetMapping("/api/v1/documents")
     public ResponseEntity<Object> list(
-        @CookieValue(name = COOKIE, required = false) String token,
+        @CookieValue(
+            name = "${auth.cookie-name:vektor_session}",
+            required = false
+        ) String token,
+        @RequestParam(
+            value = "limit",
+            required = false,
+            defaultValue = "" + DEFAULT_LIST_LIMIT
+        ) int limit,
         HttpServletRequest request
     ) {
         var claims = auth.verify(token);
         if (!claims.employee()) {
             throw Errors.forbidden();
         }
+        var bounded = Math.clamp(limit, 1, MAX_LIST_LIMIT);
         return ResponseEntity.ok(
             Map.of(
                 "documents",
-                documents.list(claims.kb()),
+                documents.list(claims.kb(), bounded),
                 "request_id",
                 rid(request)
             )
@@ -149,7 +171,10 @@ public class Api {
     @GetMapping("/api/v1/documents/{externalId}/source")
     public ResponseEntity<String> source(
         @PathVariable String externalId,
-        @CookieValue(name = COOKIE, required = false) String token
+        @CookieValue(
+            name = "${auth.cookie-name:vektor_session}",
+            required = false
+        ) String token
     ) {
         var claims = auth.verify(token);
         var document = documents.latest(claims.kb(), externalId);
@@ -178,11 +203,14 @@ public class Api {
         ) {
             throw Errors.badRequest("нужны external_id и text");
         }
+        if (body.text().length() > maxTextChars) {
+            throw Errors.tooLarge();
+        }
         var kb =
             body.kbId() == null || body.kbId().isBlank()
                 ? defaultKb
                 : body.kbId();
-        var audience = body.audience() == null ? "public" : body.audience();
+        var audience = audience(body.audience());
         var section = body.section() == null ? "Прочее" : body.section();
         var title = clip(
             body.title() == null ? body.externalId() : body.title(),
@@ -264,9 +292,31 @@ public class Api {
      * любой под в кластере мог бы вливать и читать документы.
      */
     private void checkInternal(String token) {
-        if (internalToken.isBlank() || !internalToken.equals(token)) {
+        var expected = internalToken.getBytes(StandardCharsets.UTF_8);
+        var actual =
+            token == null
+                ? new byte[0]
+                : token.getBytes(StandardCharsets.UTF_8);
+        // Пустой настроенный токен запрещает всё (fail closed), а сравнение
+        // не должно зависеть от префикса: иначе токен подбирается по таймингу.
+        if (expected.length == 0 || !MessageDigest.isEqual(expected, actual)) {
             throw Errors.forbidden();
         }
+    }
+
+    /**
+     * Аудитории — закрытый словарь, он же ограничение в схеме БД.
+     * Без проверки невалидное значение падало бы 500 на constraint.
+     */
+    private static String audience(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "public";
+        }
+        var value = raw.strip().toLowerCase(Locale.ROOT);
+        return switch (value) {
+            case "public", "employee" -> value;
+            default -> throw Errors.badRequest("audience: public или employee");
+        };
     }
 
     private static String rid(HttpServletRequest request) {

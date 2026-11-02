@@ -12,6 +12,12 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vektor_docs}
     username: ${SPRING_DATASOURCE_USERNAME:vektor}
     password: ${db.password:vektor-dev}
+    hikari:
+      # Пул должен быть явно задан: дефолтные 10 соединений съедают любой рост
+      # параллельных чтений, не показывая причину в метриках.
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 3000
   flyway:
     enabled: true
     create-schemas: true
@@ -28,8 +34,13 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
+      # send() пишется в request-потоке: без жёсткого предела при недоступном
+      # брокере он блокирует поток до 60 с и выедает пул Tomcat.
       properties:
         enable.idempotence: true
+        max.block.ms: ${KAFKA_MAX_BLOCK_MS:200}
+        request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:3000}
+        delivery.timeout.ms: ${KAFKA_DELIVERY_TIMEOUT_MS:5000}
   cloud:
     vault:
       uri: ${SPRING_CLOUD_VAULT_URI:http://localhost:8200}
@@ -54,6 +65,9 @@ management:
 documents:
   topic: ${DOCUMENTS_TOPIC:kb.document.upserted}
   max-upload-bytes: ${MAX_UPLOAD_BYTES:5242880}
+  # Предел текста, принимаемого внутренним ingest: без него один запрос
+  # может занять диск и память целой базы.
+  max-text-chars: ${MAX_TEXT_CHARS:2000000}
   jwks-url: ${JWKS_URL:http://auth:80/.well-known/jwks.json}
   default-kb: ${AUTH_KB_ID:74ade984-591f-4382-a051-ef1898855868}
   # Общий секрет для /internal/*: входной router эти пути не маршрутизирует,
