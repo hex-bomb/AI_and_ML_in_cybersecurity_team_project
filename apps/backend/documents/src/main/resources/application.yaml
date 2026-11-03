@@ -61,6 +61,11 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # Vault опционален (import: optional:vault://). Без этого флага
+    # /actuator/health отдаёт 503, и контейнер навсегда остаётся unhealthy.
+    vault:
+      enabled: false
 
 documents:
   topic: ${DOCUMENTS_TOPIC:documents}

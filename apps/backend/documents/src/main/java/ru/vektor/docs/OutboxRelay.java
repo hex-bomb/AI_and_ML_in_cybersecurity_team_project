@@ -1,5 +1,7 @@
 package ru.vektor.docs;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -34,17 +36,20 @@ public class OutboxRelay {
 
     private final JdbcClient jdbc;
     private final KafkaTemplate<String, String> kafka;
+    private final ObjectMapper mapper;
     private final String topic;
     private final int batchSize;
 
     public OutboxRelay(
         JdbcClient jdbc,
         KafkaTemplate<String, String> kafka,
+        ObjectMapper mapper,
         @Value("${documents.topic}") String topic,
         @Value("${documents.outbox-batch:100}") int batchSize
     ) {
         this.jdbc = jdbc;
         this.kafka = kafka;
+        this.mapper = mapper;
         this.topic = topic;
         this.batchSize = batchSize;
     }
@@ -74,13 +79,22 @@ public class OutboxRelay {
 
         for (var event : pending) {
             try {
+                // Конверт: тип и идентификатор события отдельно от полей
+                // документа. Ingest разбирает только конверт и не гадает
+                // по форме payload.
+                ObjectNode envelope = mapper.readValue(
+                    event.payload(),
+                    ObjectNode.class
+                );
+                envelope.put("event", event.type());
+                envelope.put("event_id", String.valueOf(event.id()));
                 // Синхронно: следующий батч не должен обгонять предыдущий,
                 // иначе порядок изменений одного документа потеряется.
                 kafka
                     .send(
                         topic,
                         event.aggregateId().toString(),
-                        event.payload()
+                        mapper.writeValueAsString(envelope)
                     )
                     .get(5, TimeUnit.SECONDS);
                 jdbc.sql(
