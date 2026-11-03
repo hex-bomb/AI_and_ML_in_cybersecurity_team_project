@@ -27,14 +27,6 @@ def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
 
-class Unavailable(Exception):
-    """Зависимость недоступна: наружу уходит 503."""
-
-
-class BadRequest(Exception):
-    """Некорректный вход на стороне зависимости: наружу 400."""
-
-
 # documents отвечает 400/413/415 на сам файл, а 401/403 — на токен.
 # Разделяем эти случаи: иначе поломка конфигурации выглядит как «файл не разобран».
 _DOCUMENTS_BAD_INPUT = frozenset({400, 413, 415})
