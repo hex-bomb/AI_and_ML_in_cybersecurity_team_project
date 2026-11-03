@@ -32,7 +32,7 @@ const API_URL = (window.AKS_WIDGET?.apiUrl || "/api/v1").replace(/\/+$/, "")
 const SPRING = { type: "spring", bounce: 0, duration: 0.28 } as const
 
 const FIELD =
-  "h-9 w-full rounded-xl border border-black/10 bg-background px-3 text-[13px] outline-none transition-shadow focus:border-[#0071e3]/50 focus:ring-4 focus:ring-[#0071e3]/15"
+  "h-9 w-full rounded-xl border border-black/10 bg-background px-3 text-[13px] outline-none transition-shadow focus:border-brand/50 focus:ring-4 focus:ring-brand/15"
 
 const DEMO_ACCOUNTS = [
   { label: "Клиент", login: "user" },
@@ -166,7 +166,7 @@ export function AuthMenu() {
           <button
             type="button"
             onClick={() => void signOut()}
-            className="rounded-full px-3 py-1.5 text-[13px] font-medium text-[#0071e3] transition-colors hover:bg-black/[0.04] active:opacity-70"
+            className="rounded-full px-3 py-1.5 text-[13px] font-medium text-brand transition-colors hover:bg-black/[0.04] active:opacity-70"
           >
             Выйти
           </button>
@@ -255,7 +255,7 @@ export function AuthMenu() {
               <button
                 type="submit"
                 disabled={pending || !login.trim() || !password}
-                className="mt-3 h-9 w-full rounded-xl bg-[#0071e3] text-[13px] font-medium text-white transition-colors hover:bg-[#0077ed] disabled:opacity-50"
+                className="mt-3 h-9 w-full rounded-xl bg-brand text-[13px] font-medium text-white transition-colors hover:bg-brand/85 disabled:opacity-50"
               >
                 {pending ? "Входим…" : "Войти"}
               </button>

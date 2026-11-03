@@ -4,13 +4,17 @@ import remarkGfm from "remark-gfm"
 
 import { cn } from "cn"
 
+const SAFE_SCHEME = /^(https?:|mailto:)/i
+
 /**
- * Markdown для сообщений. Разметка приходит из LLM — заголовки, списки, код,
- * таблицы. react-markdown не использует dangerouslySetInnerHTML, поэтому XSS
- * невозможен.
+ * Markdown для ответов: заголовки, списки, код, таблицы.
  *
- * remark-breaks превращает одиночный \n в перенос строки — без него CommonMark
- * схлопывает переносы ответа в один абзац.
+ * Текст и ссылки пишет LLM. react-markdown не вставляет HTML через
+ * dangerouslySetInnerHTML, но href из ответа всё равно фильтруем по схеме:
+ * javascript: и data: выполнились бы по клику.
+ *
+ * remark-breaks оставляет одиночный \n переносом строки — без него
+ * CommonMark схлопывает переносы ответа в один абзац.
  */
 export function MarkdownText({ children, className }: { children: string; className?: string }) {
   return (
@@ -24,11 +28,19 @@ export function MarkdownText({ children, className }: { children: string; classN
           h3: ({ children }) => <h3 className="text-sm font-semibold">{children}</h3>,
           ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
-          a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-              {children}
-            </a>
-          ),
+          a: ({ children, href }) =>
+            typeof href === "string" && SAFE_SCHEME.test(href.trim()) ? (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2"
+              >
+                {children}
+              </a>
+            ) : (
+              <span className="underline underline-offset-2">{children}</span>
+            ),
           code: ({ children }) => (
             <code className="rounded-xl bg-muted px-1.5 py-0.5 font-mono text-xs">{children}</code>
           ),

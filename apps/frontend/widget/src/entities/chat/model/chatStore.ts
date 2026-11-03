@@ -232,12 +232,14 @@ export const $chatStore = createStore<State>(initial)
 
   .on(sendTurnFx.doneData, (state, { chatId, requestId, answer }) => ({
     ...state,
-    activeChatId: chatId,
+    activeChatId: state.activeChatId ?? chatId,
     // Превью в списке диалогов — последнее сообщение; порядок задаёт createdAt.
     chats: state.chats.map((chat) =>
       chat.id === chatId ? { ...chat, preview: answer.text } : chat,
     ),
-    messages: [...state.messages, answer],
+    // Пока ждали ответ, пользователь мог открыть другой диалог: чужую реплику
+    // в текущий транскрипт не добавляем.
+    messages: chatId === state.activeChatId ? [...state.messages, answer] : state.messages,
     status: "idle",
     requestId,
   }))
@@ -348,17 +350,25 @@ export function describeError(error: unknown): string {
   if (!(error instanceof ApiRequestError)) return "Не удалось выполнить действие. Попробуйте ещё раз."
 
   switch (error.code) {
-    case "LLM_UNAVAILABLE":
-      return "Генерация ответа временно недоступна. Попробуйте ещё раз."
-    case "CONFIGURATION_MISSING":
-    case "CONFIGURATION_INVALID":
-      return "База знаний не настроена. Обратитесь к администратору."
     case "UNAUTHORIZED":
+      return "Сессия истекла. Войдите снова."
     case "FORBIDDEN":
-    case "FORBIDDEN_ERROR":
       return "Недостаточно прав для этого запроса."
-    case "RATE_LIMITED":
-      return "Слишком много запросов. Подождите немного и повторите."
+    case "KB_NOT_FOUND":
+      return "База знаний не настроена. Обратитесь к администратору."
+    case "INVALID_REQUEST":
+      return "Запрос не принят: проверьте текст и вложения."
+    case "PAYLOAD_TOO_LARGE":
+      return "Файл больше допустимого размера."
+    case "LLM_BAD_OUTPUT":
+      return "Модель вернула пустой ответ. Попробуйте переформулировать вопрос."
+    case "LLM_UNAVAILABLE":
+    case "SEARCH_UNAVAILABLE":
+    case "SERVICE_UNAVAILABLE":
+    case "AUTH_UNAVAILABLE":
+      return "Сервис временно недоступен. Попробуйте ещё раз."
+    case "http_429":
+      return "Слишком много запросов. Подождите немного."
     default:
       return error.status === 0
         ? "Сервис недоступен. Проверьте соединение."

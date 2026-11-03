@@ -12,8 +12,13 @@
  *     apiUrl: "https://search.example/api/v1",
  *     kbId: "22222222-2222-4222-8222-222222222222",
  *     zIndex: 2147483000,
+ *     widgetOrigin: "https://cdn.example.com",
  *     targetOrigin: "https://ваш-сайт.ру"
  *   }
+ *
+ * widgetOrigin и targetOrigin можно не задавать: первый выводится из src,
+ * второй — из адреса самой страницы. Явно их пишут, когда виджет отдаётся
+ * с CDN или страница открывается через прокси.
  *
  * Сессия живёт в httpOnly cookie на том же origin, что и API: ни в разметке
  * страницы, ни в postMessage токена нет. Хост после входа или выхода вызывает
@@ -25,12 +30,21 @@
 (function () {
   "use strict";
 
+  function originOf(url) {
+    try {
+      return new URL(url, location.href).origin;
+    } catch {
+      return null;
+    }
+  }
+
   var CONFIG = window.AKS_WIDGET || {};
   var src = CONFIG.src || "/widget.html";
-  // "*" по умолчанию: виджет и хост часто на разных доменах, а кадр сам
-  // выставляет origin. Если домен известен — передайте его, и тогда сообщения
-  // не уйдут ни к какому другому получателю.
-  var targetOrigin = CONFIG.targetOrigin || "*";
+  // Исходящие сообщения идут только на свой origin: чужой документ,
+  // оказавшийся в родительском окне, их не получит.
+  var targetOrigin = CONFIG.targetOrigin || location.origin;
+  // Входящие сверяем с origin виджета; по умолчанию он берётся из src.
+  var widgetOrigin = CONFIG.widgetOrigin || originOf(src);
   var payload = {
     apiUrl: CONFIG.apiUrl || "",
     kbId: CONFIG.kbId || "",
@@ -69,6 +83,8 @@
     var data = event.data;
     if (!data || data.source !== "aks-widget") return;
     if (event.source !== frame.contentWindow) return;
+    // Кадр должен быть ровно тем, что мы загрузили, а не подменённым фреймом.
+    if (widgetOrigin && event.origin !== widgetOrigin) return;
     // Виджет сообщает, открыта ли панель: пока закрыта — клики проходят мимо.
     if (data.type === "state" && typeof data.open === "boolean") {
       frame.style.clipPath = data.open ? "none" : CLOSED_CLIP;

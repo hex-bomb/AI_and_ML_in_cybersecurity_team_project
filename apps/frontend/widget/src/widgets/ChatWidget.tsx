@@ -5,7 +5,7 @@ import { Rnd } from "react-rnd"
 
 import { Button } from "@/components/ui/button"
 import { ChatWindow } from "@/entities/chat/ui/ChatWindow"
-import { useHostBridge } from "./widgetBridge"
+import { useHostBridge, postToHost } from "./widgetBridge"
 
 /** Панель открывается ровно над кнопкой. */
 const BUTTON = 60
@@ -68,7 +68,7 @@ export function ChatWidget() {
   // кнопки, пока панель закрыта.
   useEffect(() => {
     if (window.parent === window) return
-    window.parent.postMessage({ source: "aks-widget", type: "state", open }, "*")
+    postToHost({ source: "aks-widget", type: "state", open })
   }, [open])
 
   // Кнопка всегда в правом нижнем углу, панель привязана к ней.

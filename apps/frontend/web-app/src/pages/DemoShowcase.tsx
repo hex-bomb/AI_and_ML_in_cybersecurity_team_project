@@ -14,17 +14,16 @@ import { AuthMenu } from "@/components/AuthMenu"
  * Лендинг вымышленной компании «ВЕКТОР» — поставка строительной и
  * промышленной техники.
  *
- * Оформление по методике Apple (skill `apple-design`), а не по референсу
- * Revolut, которому страница следовала раньше. Что это меняет:
+ * Правила оформления страницы:
  *
  * - Типографика задаёт иерархию размером, весом и интерлиньяжем вместе: у
  *   крупных заголовков плотный интерлиньяж и отрицательный трекинг, у текста
- *   — свободный. Заголовки в обычном регистре, а не капсом.
+ *   — свободный. Заголовки в обычном регистре.
  * - Движение на пружинах: `bounce: 0, duration: 0.4` — критическое
- *   демпфирование без перелёта. Появление блоков идёт кросс-фейдом.
+ *   демпфирование без перелёта.
  * - Полупрозрачные материалы вместо линеек: шапка размывает фон, а под ней
- *   градиентом гаснет контент — без единой границы.
- * - Отклик мгновенный: кнопка уменьшается на нажатии, а не после клика.
+ *   градиентом гаснет контент.
+ * - Отклик мгновенный: кнопка уменьшается на нажатии.
  * - `prefers-reduced-motion` превращает сдвиги в простые фейды.
  */
 
@@ -111,9 +110,9 @@ const SPRING = { type: "spring", bounce: 0, duration: 0.4 } as const
 /** Пружина для импульсных взаимодействий — с небольшим перелётом. */
 const SPRING_BOUNCY = { type: "spring", bounce: 0.2, duration: 0.4 } as const
 
-/** Акцентный синий Apple — для ссылок и основных действий. */
-const ACCENT = "text-[#0071e3] hover:text-[#0077ed]"
-const ACCENT_BG = "bg-[#0071e3] hover:bg-[#0077ed]"
+/** Акцент для ссылок и основных действий — тот же токен, что в шапке. */
+const ACCENT = "text-brand hover:text-brand/80"
+const ACCENT_BG = "bg-brand hover:bg-brand/85"
 
 export function DemoShowcase() {
   return (
@@ -406,7 +405,7 @@ function Footer() {
     <footer id="contacts" className="border-t border-border px-6 py-10">
       <div className="mx-auto flex max-w-[1080px] flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-[17px] font-semibold tracking-tight text-[#0071e3]">ВЕКТОР</div>
+          <div className="text-[17px] font-semibold tracking-tight text-brand">ВЕКТОР</div>
           <p className="mt-3 max-w-[380px] text-[13px] leading-[1.5] text-muted-foreground">
             Поставка строительной и промышленной техники с 2008 года.
             Демонстрационный проект — компания вымышленная.
