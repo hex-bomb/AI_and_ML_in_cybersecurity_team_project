@@ -39,3 +39,10 @@ TLS на входном router, удаление документов.
 Подробности — [architecture/overview.md](architecture/overview.md).
 
 Проверка перед показом — [environments/local-development.md](environments/local-development.md).
+
+## Как внести изменение
+
+Ветка отводится от `develop`, PR идёт в `develop`. Шаблон описания подставится
+сам; его чек-лист повторяет [«Перед PR»](architecture/extensibility.md#перед-pr).
+Ревьюер назначается автоматически, если PR открыл не владелец репозитория:
+себя GitHub ревьюером не назначает.

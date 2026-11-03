@@ -1,0 +1,55 @@
+name: Ошибка
+description: Что-то работает не так, как описано в документации
+labels: [bug]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Компонент
+      options:
+        - answer
+        - auth
+        - documents
+        - embedding
+        - ingest
+        - retrieval
+        - widget
+        - web-app
+        - infra
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Что произошло
+      description: Фактическое поведение и текст ошибки, если он есть.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      description: Шаги или команда. Для ответа API укажите `request_id`.
+      placeholder: |
+        1. make up
+        2. POST /api/v1/answers с телом …
+        3. В ответе 500 вместо ответа модели
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+      description: Что должно было произойти и где это описано.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия
+      description: Коммит или тег, на котором воспроизводится.

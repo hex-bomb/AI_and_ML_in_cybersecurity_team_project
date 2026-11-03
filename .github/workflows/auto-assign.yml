@@ -1,0 +1,23 @@
+name: auto-assign
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  reviewer:
+    runs-on: ubuntu-latest
+    # GitHub не даёт запросить ревью у автора PR, поэтому свои PR пропускаем.
+    # Для PR из форков токен только на чтение, там запрос тоже не пройдёт.
+    if: >-
+      github.event.pull_request.user.login != 'KirillYuzh' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-reviewer KirillYuzh

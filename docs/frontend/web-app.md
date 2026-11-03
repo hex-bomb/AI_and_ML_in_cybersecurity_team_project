@@ -11,6 +11,8 @@
 - Плагин `widgetBundle` берёт собранный `widget/dist` через `@aks/widget` и
   отдаёт его из `/aks/`.
 - `index.html` объявляет `window.AKS_WIDGET` и подключает `/aks/aks-widget.js`.
+- Цвет акцента — токен `--brand` в `src/styles/globals.css`; те же значения
+  продублированы в виджете, потому что у него свой CSS в iframe.
 
 ## Запуск
 

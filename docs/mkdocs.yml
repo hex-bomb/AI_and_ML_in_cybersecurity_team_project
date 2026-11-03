@@ -41,6 +41,11 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+      # Unicode-слаги: без них русские заголовки получают id вида _1 и ссылки
+      # с якорем не работают.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true

@@ -262,20 +262,20 @@ export type HostToWidget =
 Таблица составлена по текущему коду. Статус «сделано» означает, что изменение
 есть в `develop` или в открытом PR.
 
-| Проблема                                                                  | Где                                                   | Статус                                     |
-| ------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------ |
-| Два эндпоинта `answer` повторяли порядок «токен → guard → поиск → LLM»    | `answer/app/main.py`                                  | сделано в PR #8: сценарии в `app/usecases` |
-| `Clients` — один класс на JWKS, поиск, эмбеддинги, documents и LLM        | `answer/app/clients.py`                               | открыто                                    |
-| Провайдер LLM выбирается `if gigachat_mode` в конструкторе                | `answer/app/clients.py`                               | открыто                                    |
-| Политики guard — кортежи регулярок в модуле                               | `answer/app/guard.py`                                 | открыто                                    |
-| Контроллер `documents` смешивает публичное API, `/internal/*` и валидацию | `documents/.../Api.java`                              | открыто                                    |
-| Аудитории `public`/`employee` заданы в трёх местах                        | `auth`, схема БД, запрос к ES                         | открыто                                    |
-| Проверка JWT и конверт ошибки написаны трижды                             | `TokenVerifier`, `jwks/verifier.go`, `Clients.verify` | открыто                                    |
-| `chatStore.ts` (~370 строк) отвечает за всё состояние виджета             | `widget/entities/chat/model`                          | открыто                                    |
-| `postMessage` без версии протокола, ответы с `targetOrigin = "*"`         | `ChatWidget.tsx`, `aks-widget.js`                     | открыто                                    |
-| Настройки читаются в разных местах                                        | `clients.py`, `main.go`                               | частично: в `answer` есть `settings.py`    |
-| Нет outbox и DLQ                                                          | `documents`, `ingest`                                 | осознанно                                  |
-| Одна партиция Kafka                                                       | `docs/infrastructure/kafka.md`                        | осознанно                                  |
+| Проблема                                                                  | Где                                                   | Статус                                                         |
+| ------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
+| Два эндпоинта `answer` повторяли порядок «токен → guard → поиск → LLM»    | `answer/app/main.py`                                  | сделано в PR #8: сценарии в `app/usecases`                     |
+| `Clients` — один класс на JWKS, поиск, эмбеддинги, documents и LLM        | `answer/app/clients.py`                               | открыто                                                        |
+| Провайдер LLM выбирается `if gigachat_mode` в конструкторе                | `answer/app/clients.py`                               | открыто                                                        |
+| Политики guard — кортежи регулярок в модуле                               | `answer/app/guard.py`                                 | открыто                                                        |
+| Контроллер `documents` смешивает публичное API, `/internal/*` и валидацию | `documents/.../Api.java`                              | открыто                                                        |
+| Аудитории `public`/`employee` заданы в трёх местах                        | `auth`, схема БД, запрос к ES                         | открыто                                                        |
+| Проверка JWT и конверт ошибки написаны трижды                             | `TokenVerifier`, `jwks/verifier.go`, `Clients.verify` | открыто                                                        |
+| `chatStore.ts` (~370 строк) отвечает за всё состояние виджета             | `widget/entities/chat/model`                          | открыто                                                        |
+| `postMessage` без версии протокола, ответы с `targetOrigin = "*"`         | `ChatWidget.tsx`, `aks-widget.js`                     | частично: origin сверяется в обе стороны, версии протокола нет |
+| Настройки читаются в разных местах                                        | `clients.py`, `main.go`                               | частично: в `answer` есть `settings.py`                        |
+| Нет outbox и DLQ                                                          | `documents`, `ingest`                                 | осознанно                                                      |
+| Одна партиция Kafka                                                       | `docs/infrastructure/kafka.md`                        | осознанно                                                      |
 
 ## Рецепты
 
