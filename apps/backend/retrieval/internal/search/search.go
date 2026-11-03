@@ -13,8 +13,11 @@ const (
 
 // Hit — один фрагмент в ответе наружу.
 type Hit struct {
-	ChunkID     string  `json:"chunk_id"`
-	DocumentID  string  `json:"document_id"`
+	ChunkID    string `json:"chunk_id"`
+	DocumentID string `json:"document_id"`
+	// DocumentRef — внутренний идентификатор документа. По нему answer
+	// сохраняет цитаты: внешний ключ не годится для ссылок в БД.
+	DocumentRef string  `json:"document_ref"`
 	VersionID   string  `json:"version_id"`
 	Title       string  `json:"title"`
 	Text        string  `json:"text"`
@@ -62,7 +65,7 @@ func scopeFilter(s Scope) []any {
 		map[string]any{"bool": map[string]any{
 			"minimum_should_match": 1,
 			"should": []any{
-				map[string]any{"term": map[string]any{"open": true}},
+				map[string]any{"term": map[string]any{"open_to_all": true}},
 				map[string]any{"terms": map[string]any{"group_keys": groups}},
 			},
 		}},
@@ -144,11 +147,12 @@ func RRF(rankings [][]string, limit int) []Fused {
 func ToHit(src map[string]any, score float64) Hit {
 	documentID := str(src["document_id"])
 	return Hit{
-		ChunkID:    str(src["chunk_id"]),
-		DocumentID: documentID,
-		VersionID:  str(src["version_id"]),
-		Title:      str(src["title"]),
-		Text:       str(src["text"]),
+		ChunkID:     str(src["chunk_id"]),
+		DocumentID:  documentID,
+		DocumentRef: str(src["document_ref"]),
+		VersionID:   str(src["version_id"]),
+		Title:       str(src["title"]),
+		Text:        str(src["text"]),
 		Locator: Locator{
 			BlockIDs:    []string{},
 			SectionPath: stringsOf(src["section_path"]),
