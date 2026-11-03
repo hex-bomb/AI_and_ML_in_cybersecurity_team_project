@@ -158,6 +158,18 @@ class DocumentRepositoryTest {
         var publication = inTx(() -> repository.publish("doc-publish", null));
         assertEquals(version.id(), publication.versionId());
         assertEquals(List.of("public"), publication.channels());
+        // Событие публикации должно нести версию: без неё ингест не поймёт,
+        // какие чанки открывать.
+        var payload = jdbc
+            .sql(
+                """
+                select payload::text from outbox_events
+                 where event_type = 'document.published'
+                """
+            )
+            .query(String.class)
+            .single();
+        assertTrue(payload.contains(version.id().toString()));
         assertEquals(
             "published",
             jdbc

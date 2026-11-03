@@ -62,8 +62,7 @@ public class Tokens {
         String name,
         String role,
         List<String> scopes,
-        String tenant,
-        String kb,
+        List<String> groups,
         long ttlSeconds
     ) throws Exception {
         var now = Instant.now();
@@ -73,8 +72,7 @@ public class Tokens {
             .claim("name", name)
             .claim("role", role)
             .claim("scp", scopes)
-            .claim("tenant", tenant)
-            .claim("kb", kb)
+            .claim("grp", groups)
             .issueTime(Date.from(now))
             .expirationTime(Date.from(now.plus(ttlSeconds, ChronoUnit.SECONDS)))
             .build();

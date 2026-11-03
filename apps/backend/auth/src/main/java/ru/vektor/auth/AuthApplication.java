@@ -22,28 +22,15 @@ public class AuthApplication {
     @Profile("dev")
     ApplicationRunner devUsers(
         UserRepository users,
-        @Value("${auth.tenant-id}") String tenantId,
         @Value(
             "${auth.dev-admin-password:dev-admin-password}"
         ) String adminPassword
     ) {
         return args -> {
-            users.seed("user", "Клиент", "user", tenantId, "user");
-            users.seed(
-                "employee",
-                "Сотрудник",
-                "employee",
-                tenantId,
-                "employee"
-            );
+            users.seed("user", "Клиент", "user", "user");
+            users.seed("employee", "Сотрудник", "employee", "employee");
             // Сервисный аккаунт: его токен живёт практически без срока (adminTtl).
-            users.seed(
-                "admin",
-                "Администратор",
-                "admin",
-                tenantId,
-                adminPassword
-            );
+            users.seed("admin", "Администратор", "admin", adminPassword);
         };
     }
 }

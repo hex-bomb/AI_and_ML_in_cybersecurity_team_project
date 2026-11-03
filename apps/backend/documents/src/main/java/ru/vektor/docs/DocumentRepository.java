@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -249,7 +250,9 @@ public class DocumentRepository {
             .param("document", documentId)
             .update();
 
-        var payload = accessPayload(documentId);
+        var payload = new HashMap<>(accessPayload(documentId));
+        payload.put("version_id", target.toString());
+        payload.put("external_id", externalId);
         enqueue("document.published", documentId, payload);
         return new Publication(
             externalId,

@@ -15,6 +15,7 @@ import java.util.Date;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -72,6 +73,7 @@ public class TokenVerifier {
     private volatile Instant fetchedAt = Instant.EPOCH;
     private volatile Instant nextRefreshAt = Instant.EPOCH;
 
+    @Autowired
     public TokenVerifier(
         @Value("${documents.jwks-url}") String jwksUrl,
         @Value("${documents.issuer:vektor-auth}") String issuer
