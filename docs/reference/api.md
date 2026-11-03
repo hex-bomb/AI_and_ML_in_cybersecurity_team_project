@@ -68,6 +68,7 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | `query`                  | ≤ 1000                   | `retrieval`                                     |
 | `conversation_id`        | uuid                     | pydantic в `answer`                             |
 | `client_message_id`      | ≤ 100 символов           | pydantic в `answer`                             |
+| `page_context`           | поля обрезаются          | `app/page_context.py` в `answer`                |
 | `top_k`                  | 1–10                     | `retrieval`                                     |
 | Частота, обычные запросы | 20 rps на IP             | router (`limit_req zone=main`)                  |
 | Частота, `/auth/login`   | 2 rps на IP, ответ `429` | router (`limit_req zone=login`)                 |

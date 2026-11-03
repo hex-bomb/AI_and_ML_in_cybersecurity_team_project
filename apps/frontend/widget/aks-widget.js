@@ -26,6 +26,11 @@
  *
  * Если apiUrl и kbId заданы, виджет работает с настоящим API. Без них
  * остаётся демо-режим на моках, чтобы страницу можно было открыть без бэкенда.
+ *
+ * Контекст страницы собирается только по действию пользователя и только пока
+ * панель открыта: адрес без query и fragment, заголовок, выделенный текст,
+ * ближайшие data-assistant-content / data-assistant-section / data-assistant-version.
+ * Поля ввода, скрытые блоки и всё под data-assistant-ignore не читаются.
  */
 (function () {
   "use strict";
@@ -77,6 +82,97 @@
     }
   }
 
+  var panelOpen = false;
+  var lastUrl = location.href;
+
+  function closestAttr(node, attribute) {
+    var element = node && node.nodeType === 1 ? node : node && node.parentElement;
+    var found = element && element.closest ? element.closest("[" + attribute + "]") : null;
+    return found ? found.getAttribute(attribute) || "" : "";
+  }
+
+  /** Скрытые и исключённые контейнеры не читаем: там может быть что угодно. */
+  function readable(element) {
+    return !!element && element.getClientRects().length > 0 && !element.closest("[data-assistant-ignore]");
+  }
+
+  /** Текст выделения и ближайшая разрешённая разметка. null — контекста нет. */
+  function collectContext() {
+    if (!panelOpen) return null;
+
+    var context = { url: location.href.split("#")[0], title: document.title || "" };
+    var anchor = null;
+    var selection = window.getSelection();
+
+    if (selection && selection.rangeCount && !selection.isCollapsed) {
+      anchor = selection.anchorNode;
+      var element = anchor && anchor.nodeType === 1 ? anchor : anchor && anchor.parentElement;
+      // Поля ввода и редактируемые области — личные данные, их не отправляем.
+      if (!element || element.closest("input, textarea, [contenteditable='true']")) return context;
+      if (!readable(element)) return context;
+
+      var text = selection.toString().replace(/\s+/g, " ").trim().slice(0, 1000);
+      if (text) context.selection = { text: text };
+    }
+
+    var bound = anchor
+      ? (anchor.nodeType === 1 ? anchor : anchor.parentElement)
+      : document.querySelector("[data-assistant-content]");
+    var content = bound && bound.closest ? bound.closest("[data-assistant-content]") : null;
+    if (content) {
+      context.content_key = content.getAttribute("data-assistant-content") || "";
+      context.version_hint = content.getAttribute("data-assistant-version") || "";
+    }
+    var section = bound && bound.closest ? bound.closest("[data-assistant-section]") : null;
+    if (section) context.section_key = section.getAttribute("data-assistant-section") || "";
+
+    return context;
+  }
+
+  /** Отправить контекст кадру; null — сброс (например, после SPA-перехода). */
+  function sendContext(payload) {
+    if (!frame.contentWindow) return;
+    frame.contentWindow.postMessage(
+      { source: "aks-host", type: "context", payload: payload || null },
+      targetOrigin
+    );
+  }
+
+  var contextTimer = null;
+
+  function scheduleContext() {
+    // Навигация меняет страницу целиком: старый контекст к ней не относится.
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      sendContext(null);
+    }
+    if (!panelOpen) return;
+    if (contextTimer) clearTimeout(contextTimer);
+    contextTimer = setTimeout(function () {
+      contextTimer = null;
+      sendContext(collectContext());
+    }, 150);
+  }
+
+  document.addEventListener("mouseup", scheduleContext, true);
+  document.addEventListener("keyup", scheduleContext, true);
+  window.addEventListener("popstate", function () {
+    lastUrl = location.href;
+    sendContext(null);
+  });
+
+  // SPA меняет адрес без popstate: иначе контекст прежней страницы остался бы.
+  ["pushState", "replaceState"].forEach(function (name) {
+    var original = history[name];
+    if (typeof original !== "function") return;
+    history[name] = function () {
+      var result = original.apply(this, arguments);
+      lastUrl = location.href;
+      sendContext(null);
+      return result;
+    };
+  });
+
   // Кадр сообщает, когда он готов принять конфиг: событие load срабатывает
   // раньше, чем React монтирует слушатель, и первый config терялся бы.
   function onFrameMessage(event) {
@@ -88,6 +184,9 @@
     // Виджет сообщает, открыта ли панель: пока закрыта — клики проходят мимо.
     if (data.type === "state" && typeof data.open === "boolean") {
       frame.style.clipPath = data.open ? "none" : CLOSED_CLIP;
+      panelOpen = data.open;
+      // Панель открыли — сразу отдаём контекст текущей страницы.
+      if (panelOpen) sendContext(collectContext());
       return;
     }
     if (data.type === "ready") send("config");

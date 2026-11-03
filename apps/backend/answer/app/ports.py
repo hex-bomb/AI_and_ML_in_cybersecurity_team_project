@@ -46,6 +46,7 @@ class Dialogs(Protocol):
         client_message_id: str,
         question: str,
         request_id: str,
+        page_context: dict[str, Any] | None = None,
     ) -> Started: ...
 
     async def finish(

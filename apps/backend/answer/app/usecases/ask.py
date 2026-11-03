@@ -6,6 +6,7 @@ from uuid import UUID
 from app.db import ConversationNotFound, IdempotencyConflict, TurnInProgress, citation_rows
 from app.errors import AppError, Unavailable
 from app.guard import blocked_reason
+from app.page_context import prompt_block, query_hint
 from app.ports import Completer, Dialogs, Retriever
 from app.rag import NO_EVIDENCE
 from app.usecases.common import answer_from_hits
@@ -26,6 +27,7 @@ class Question:
     conversation_id: UUID | None = None
     client_message_id: str | None = None
     request_id: str = ""
+    page_context: dict[str, Any] | None = None
 
 
 class AskQuestion:
@@ -59,6 +61,7 @@ class AskQuestion:
                 client_message_id=client_message_id,
                 question=question.text,
                 request_id=question.request_id,
+                page_context=question.page_context,
             )
         except ConversationNotFound as exc:
             raise AppError.not_found("CONVERSATION_NOT_FOUND", "Диалог не найден") from exc
@@ -76,7 +79,12 @@ class AskQuestion:
             return started.replay
 
         try:
-            result, hits = await self._answer(question.text, started.history, question.token)
+            result, hits = await self._answer(
+                question.text,
+                started.history,
+                question.token,
+                question.page_context,
+            )
         except AppError as exc:
             await self._dialogs.fail(started.turn_id, exc.code)
             raise
@@ -97,19 +105,30 @@ class AskQuestion:
         return payload
 
     async def _answer(
-        self, text: str, history: tuple[str, ...], token: str
+        self,
+        text: str,
+        history: tuple[str, ...],
+        token: str,
+        page_context: dict[str, Any] | None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         reason = blocked_reason(text)
         if reason:
             raise AppError.forbidden("Запрос отклонён политикой безопасности", {"reason": reason})
 
+        # Выделение помогает короткому вопросу: «А для товара со скидкой?» без
+        # него не находит нужный раздел. Права от этого не меняются.
+        hint = query_hint(page_context)
+        query = f"{hint} {text}" if hint else text
+
         try:
-            hits = await self._retriever.search(text, self._top_k, token)
+            hits = await self._retriever.search(query, self._top_k, token)
         except Unavailable as exc:
             raise AppError.search_unavailable() from exc
 
         if not hits:
             return {"status": "no_evidence", "answer": NO_EVIDENCE, "citations": []}, []
 
-        result = await answer_from_hits(self._completer, text, history, hits)
+        result = await answer_from_hits(
+            self._completer, text, history, hits, page=prompt_block(page_context)
+        )
         return result, hits

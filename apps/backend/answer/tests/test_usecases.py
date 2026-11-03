@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from app.db import ConversationNotFound, IdempotencyConflict, TurnInProgress
 from app.errors import AppError, BadRequest, Unavailable
+from app.page_context import parse as parse_page_context
 from app.rag import NO_EVIDENCE
 from app.usecases.ask import AskQuestion, Question
 from app.usecases.ask_file import AskAboutFile, FileQuestion
@@ -186,6 +187,60 @@ def test_reused_message_key_with_other_text_is_409() -> None:
         asyncio.run(ask(question()))
 
     assert (error.value.status, error.value.code) == (409, "IDEMPOTENCY_CONFLICT")
+
+
+def test_selection_extends_search_query() -> None:
+    retriever = FakeRetriever([hit()])
+    page = parse_page_context({"selection": {"text": "Возврат возможен в течение 14 дней"}})
+    asked = Question(
+        text="А для товара со скидкой?",
+        token=SESSION,
+        subject="user-1",
+        client_message_id="msg-selection",
+        page_context=page,
+    )
+
+    asyncio.run(ask_question(retriever=retriever)(asked))
+
+    assert retriever.queries[0] == "Возврат возможен в течение 14 дней А для товара со скидкой?"
+
+
+def test_page_context_reaches_prompt_and_storage() -> None:
+    completer = FakeCompleter()
+    dialogs = FakeDialogs()
+    page = parse_page_context({"title": "Возврат товара", "url": "https://shop.example/returns"})
+
+    asked = Question(
+        text="а для товара со скидкой?",
+        token=SESSION,
+        subject="user-1",
+        client_message_id="msg-page",
+        page_context=page,
+    )
+    asyncio.run(ask_question(completer=completer, dialogs=dialogs)(asked))
+
+    assert "Страница: Возврат товара" in completer.prompts[0]
+    assert dialogs.page_context == page
+
+
+def test_page_context_does_not_change_access_fields() -> None:
+    # Контекст — подсказка поиска, а не разрешение: канал берётся из сессии.
+    retriever = FakeRetriever([hit()])
+    dialogs = FakeDialogs()
+    page = parse_page_context({"content_key": "internal-pricing"})
+
+    asked = Question(
+        text="сколько стоит?",
+        token=SESSION,
+        subject="user-1",
+        channel="public",
+        client_message_id="msg-access",
+        page_context=page,
+    )
+    asyncio.run(ask_question(retriever=retriever, dialogs=dialogs)(asked))
+
+    assert dialogs.channel == "public"
+    assert page["content_key"] == "internal-pricing"
 
 
 def test_file_uses_file_citations() -> None:

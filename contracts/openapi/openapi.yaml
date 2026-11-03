@@ -405,6 +405,30 @@ components:
           description: |
             Ключ намерения клиента. Повтор с тем же ключом возвращает сохранённый
             ответ, другой текст с тем же ключом — 409.
+        page_context:
+          $ref: "#/components/schemas/PageContext"
+    PageContext:
+      type: object
+      description: |
+        Недоверенный контекст страницы из виджета. Влияет только на формулировку
+        поискового запроса; доступ к документам от него не зависит. Поля
+        обрезаются, адрес принимается только http/https без query и fragment.
+      properties:
+        url: { type: string, maxLength: 500 }
+        title: { type: string, maxLength: 300 }
+        content_key:
+          type: string
+          maxLength: 100
+          description: Подсказка для поиска привязки, не разрешение на чтение.
+        version_hint: { type: string, maxLength: 100 }
+        section_key: { type: string, maxLength: 100 }
+        selection:
+          type: object
+          required: [text]
+          properties:
+            text: { type: string, maxLength: 1000 }
+            prefix: { type: string, maxLength: 200 }
+            suffix: { type: string, maxLength: 200 }
     Citation:
       type: object
       required:

@@ -13,7 +13,7 @@ import {
   setConversationId,
   setStoreRole,
 } from "@/shared/db/chats"
-import type { AnswerResponse, Citation } from "@/shared/types/api"
+import type { AnswerResponse, Citation, PageContext } from "@/shared/types/api"
 import type { Chat, ChatMessage, ChatStatus } from "@/shared/types/chat"
 
 /* конфигурация виджета */
@@ -53,8 +53,19 @@ export const draftChanged = createEvent<string>()
 /** Сессия пропала (выход или 401): чужой транскрипт больше не показываем. */
 export const sessionCleared = createEvent()
 
+/** Контекст страницы от хоста: выделение, заголовок, привязка разметки. */
+export const pageContextChanged = createEvent<PageContext | null>()
+
 /** Пришёл ответ `/auth/me` или `/auth/login`. `null` — гость. */
 export const sessionChanged = createEvent<Session | null>()
+
+/**
+ * Текущий контекст страницы. Живёт до смены диалога, явного сброса пользователем
+ * или навигации в хосте: устаревший контекст хуже, чем его отсутствие.
+ */
+export const $pageContext = createStore<PageContext | null>(null)
+  .on(pageContextChanged, (_, context) => context)
+  .reset(sessionCleared)
 
 export const $session = createStore<Session | null>(null)
   .on(sessionChanged, (_, session) => session)
@@ -96,10 +107,12 @@ const answerFx = createEffect(
     question,
     conversationId,
     clientMessageId,
+    pageContext,
   }: {
     question: string
     conversationId?: string
     clientMessageId: string
+    pageContext: PageContext | null
   }): Promise<AnswerResponse> => {
     const { apiUrl, useMock } = $config.getState()
     if (useMock) return mockAnswer(question)
@@ -114,7 +127,12 @@ const answerFx = createEffect(
 
     try {
       return await generateAnswer(
-        { question, conversation_id: conversationId, client_message_id: clientMessageId },
+        {
+          question,
+          conversation_id: conversationId,
+          client_message_id: clientMessageId,
+          ...(pageContext ? { page_context: pageContext } : {}),
+        },
         { apiUrl },
       )
     } catch (error) {
@@ -128,6 +146,7 @@ const answerFx = createEffect(
 type Turn = {
   userMessage: ChatMessage
   conversationId?: string
+  pageContext: PageContext | null
 }
 
 /** Возврат шага. Тип задан явно: ниже `$chatStore` выводится из него. */
@@ -138,7 +157,7 @@ type TurnResult = {
   answer: ChatMessage
 }
 
-const sendTurnFx = createEffect(async ({ userMessage, conversationId }: Turn): Promise<TurnResult> => {
+const sendTurnFx = createEffect(async ({ userMessage, conversationId, pageContext }: Turn): Promise<TurnResult> => {
   // Диалога ещё нет — первый вопрос создаёт его на лету.
   const chatId = $chatStore.getState().activeChatId ?? (await createChatFx()).id
 
@@ -150,6 +169,7 @@ const sendTurnFx = createEffect(async ({ userMessage, conversationId }: Turn): P
     question: userMessage.text,
     conversationId,
     clientMessageId: userMessage.id,
+    pageContext,
   })
 
   if (!conversationId) await setConversationId(chatId, response.conversation_id)
@@ -329,12 +349,17 @@ sample({
         createdAt: new Date().toISOString(),
       },
       conversationId: state.chats.find((chat) => chat.id === state.activeChatId)?.conversationId,
+      pageContext: $pageContext.getState(),
     }
   },
   target: turnRequested,
 })
 
 sample({ clock: turnRequested, target: sendTurnFx })
+
+// Смена диалога сбрасывает контекст: он относится к странице, а не к переписке,
+// и в новом диалоге выглядел бы как привязка, которой нет.
+sample({ clock: [chatSelected, chatCreated], fn: () => null, target: pageContextChanged })
 sample({ clock: chatsOpened, target: loadChatsFx })
 sample({ clock: chatSelected, target: loadMessagesFx })
 sample({ clock: chatCreated, target: createChatFx })

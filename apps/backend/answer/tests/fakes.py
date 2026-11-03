@@ -29,9 +29,11 @@ class FakeRetriever:
         self.hits = hits or []
         self.error = error
         self.calls = 0
+        self.queries: list[str] = []
 
     async def search(self, query: str, top_k: int, token: str):
         self.calls += 1
+        self.queries.append(query)
         if self.error:
             raise self.error
         return self.hits
@@ -106,10 +108,13 @@ class FakeDialogs:
         client_message_id,
         question,
         request_id,
+        page_context=None,
     ) -> Started:
         if self.error:
             raise self.error
         self.conversation_id = conversation_id or uuid.uuid4()
+        self.page_context = page_context
+        self.channel = channel
         return Started(
             conversation_id=self.conversation_id,
             turn_id=self.turn_id,

@@ -23,6 +23,9 @@
 - В диалоге одна активная генерация: параллельный запрос получает
   `409 TURN_IN_PROGRESS` (частичный уникальный индекс `uq_turns_active`).
 - Чужой `conversation_id` неотличим от несуществующего — `404`.
+- `page_context` — недоверенный ввод: поля обрезаются, адрес принимается только
+  `http(s)` без query и fragment, права от контекста не зависят. Он попадает в
+  поисковый запрос и промпт как данные.
 - Брошенную генерацию при старте помечает `interrupted`, иначе диалог остался бы
   занятым навсегда.
 
@@ -48,8 +51,10 @@ app/clients.py     — клиенты зависимостей (retrieval, embed
 
 ## Контракт
 
-Запрос: `{"question", "conversation_id"?, "client_message_id"?}`. Пустой
-`conversation_id` — сервер создаст диалог.
+Запрос: `{"question", "conversation_id"?, "client_message_id"?, "page_context"?}`.
+Пустой `conversation_id` — сервер создаст диалог. `page_context` сохраняется в
+`turns.page_context`, выделенный текст добавляется к поисковому запросу, заголовок
+страницы — к промпту.
 
 Ответ: `{"status": "ok"|"no_evidence", "answer", "citations": [...],
 "conversation_id", "turn_id", "request_id"}`.

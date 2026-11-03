@@ -86,6 +86,7 @@ class Dialogs:
         client_message_id: str,
         question: str,
         request_id: str,
+        page_context: dict[str, Any] | None = None,
     ) -> Started:
         """Зарегистрировать реплику и вернуть контекст для генерации.
 
@@ -157,14 +158,15 @@ class Dialogs:
                 turn_id = uuid.uuid4()
                 await cur.execute(
                     "insert into turns (id, conversation_id, seq, client_message_id,"
-                    " question, state, request_id)"
-                    " values (%s, %s, %s, %s, %s, 'running', %s)",
+                    " question, page_context, state, request_id)"
+                    " values (%s, %s, %s, %s, %s, %s, 'running', %s)",
                     (
                         turn_id,
                         conversation_id,
                         seq,
                         client_message_id,
                         question,
+                        Jsonb(page_context) if page_context else None,
                         request_id,
                     ),
                 )

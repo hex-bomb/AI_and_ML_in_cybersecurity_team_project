@@ -39,12 +39,31 @@ export type SearchResponse = {
   request_id: string
 }
 
+/**
+ * Контекст страницы, собранный хостом по действию пользователя. Сервер считает
+ * его недоверенным: обрезает поля и не меняет от него доступ.
+ */
+export type PageContext = {
+  url?: string
+  title?: string
+  content_key?: string
+  version_hint?: string
+  section_key?: string
+  selection?: {
+    text: string
+    prefix?: string
+    suffix?: string
+  }
+}
+
 export type AnswerRequest = {
   question: string
   /** Пусто — сервер создаст диалог и вернёт его в ответе. */
   conversation_id?: string
   /** Ключ намерения: повтор с тем же ключом не создаёт вторую реплику. */
   client_message_id?: string
+  /** Контекст страницы: подсказка для поиска, не разрешение на чтение. */
+  page_context?: PageContext
 }
 
 export type Citation = {

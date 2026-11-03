@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.deps import Auth, ask_about_file, ask_question, authenticated, get_clients, get_dialogs
 from app.errors import AppError
+from app.page_context import parse as parse_page_context
 from app.ports import Dialogs
 from app.settings import MAX_UPLOAD, TURN_STALE_SECONDS
 from app.usecases.ask import AskQuestion, Question
@@ -45,6 +46,9 @@ class AnswerRequest(BaseModel):
     conversation_id: UUID | None = None
     # Ключ намерения клиента: повтор с тем же ключом не создаёт новую реплику.
     client_message_id: str | None = Field(default=None, min_length=1, max_length=100)
+    # Контекст страницы из виджета. Недоверенный: поля обрезаются, доступ от него
+    # не зависит.
+    page_context: dict[str, Any] | None = None
 
 
 def rid(request: Request) -> str:
@@ -116,6 +120,7 @@ async def answers(
             conversation_id=payload.conversation_id,
             client_message_id=payload.client_message_id,
             request_id=rid(request),
+            page_context=parse_page_context(payload.page_context),
         )
     )
     return answer_response(result, request)
