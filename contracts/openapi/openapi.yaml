@@ -364,6 +364,9 @@ components:
       properties:
         chunk_id: { type: string }
         document_id: { type: string }
+        document_ref:
+          type: string
+          description: Внутренний идентификатор документа; по нему сохраняются цитаты.
         version_id: { type: string }
         title: { type: string }
         text: { type: string }
@@ -386,22 +389,22 @@ components:
           items:
             $ref: "#/components/schemas/SearchHit"
         request_id: { type: string }
-    AnswerTurn:
-      type: object
-      required: [role, text]
-      properties:
-        role: { type: string, enum: [user, assistant] }
-        text: { type: string, maxLength: 1000 }
     AnswerRequest:
       type: object
       required: [question]
       properties:
         question: { type: string, maxLength: 4000 }
-        history:
-          type: array
-          maxItems: 20
-          items:
-            $ref: "#/components/schemas/AnswerTurn"
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Пусто — сервер создаст диалог и вернёт идентификатор.
+        client_message_id:
+          type: string
+          maxLength: 100
+          description: |
+            Ключ намерения клиента. Повтор с тем же ключом возвращает сохранённый
+            ответ, другой текст с тем же ключом — 409.
     Citation:
       type: object
       required:
@@ -430,7 +433,8 @@ components:
         download_url: { type: string }
     AnswerResponse:
       type: object
-      required: [status, answer, citations, request_id]
+      required:
+        [status, answer, citations, request_id, conversation_id, turn_id]
       properties:
         status:
           type: string
@@ -440,6 +444,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Citation"
+        conversation_id: { type: string, format: uuid }
+        turn_id: { type: string, format: uuid }
         request_id: { type: string }
     FileCitation:
       type: object

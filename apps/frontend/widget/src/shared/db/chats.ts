@@ -22,6 +22,8 @@ type ChatRow = {
   createdAt: string
   /** Время последней записи: по нему сортируется список; `createdAt` не меняется. */
   updatedAt: string
+  /** Идентификатор диалога на сервере; до первого ответа его нет. */
+  conversationId?: string
   /** Текст последнего сообщения — денормализация ради списка диалогов. */
   preview: string
   pinned?: boolean
@@ -118,6 +120,14 @@ export async function deleteChat(chatId: string): Promise<void> {
     await store.messages.where("chatId").equals(chatId).delete()
     await store.chats.delete(chatId)
   })
+}
+
+/**
+ * Запомнить серверный диалог. Повторный ответ того же диалога ничего не меняет:
+ * идентификатор присваивается один раз и больше не переписывается.
+ */
+export async function setConversationId(chatId: string, conversationId: string): Promise<void> {
+  await db().chats.update(chatId, { conversationId })
 }
 
 /**

@@ -66,7 +66,8 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | Файл                     | 5 МиБ                    | Spring multipart + явная проверка в `documents` |
 | `question`               | 1–4000 символов          | pydantic в `answer`                             |
 | `query`                  | ≤ 1000                   | `retrieval`                                     |
-| `history`                | ≤ 20 реплик по 1000      | pydantic в `answer`                             |
+| `conversation_id`        | uuid                     | pydantic в `answer`                             |
+| `client_message_id`      | ≤ 100 символов           | pydantic в `answer`                             |
 | `top_k`                  | 1–10                     | `retrieval`                                     |
 | Частота, обычные запросы | 20 rps на IP             | router (`limit_req zone=main`)                  |
 | Частота, `/auth/login`   | 2 rps на IP, ответ `429` | router (`limit_req zone=login`)                 |
@@ -101,6 +102,9 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | 401  | `UNAUTHORIZED`        | нет cookie, истёк или испорчен токен                          |
 | 403  | `FORBIDDEN`           | нет роли, запрос отклонён guard                               |
 | 404  | `NOT_FOUND`           | документа нет или он недоступен                               |
+| 404  | `CONVERSATION_NOT_FOUND` | диалога нет или он принадлежит другому пользователю        |
+| 409  | `TURN_IN_PROGRESS`    | в диалоге уже идёт генерация                                  |
+| 409  | `IDEMPOTENCY_CONFLICT` | `client_message_id` уже использован с другим вопросом        |
 | 413  | `PAYLOAD_TOO_LARGE`   | файл или тело больше лимита                                   |
 | 429  | —                     | превышен лимит router; тело — штатное для nginx, без конверта |
 | 502  | `LLM_BAD_OUTPUT`      | модель вернула пустой ответ                                   |

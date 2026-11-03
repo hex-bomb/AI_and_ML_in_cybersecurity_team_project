@@ -16,10 +16,10 @@
 
 | Сервис      | Язык               | Владеет                          | Профиль нагрузки                                     |
 | ----------- | ------------------ | -------------------------------- | ---------------------------------------------------- |
-| `auth`      | Java / Spring Boot | `auth_users`                     | редкие записи, дорогой `scrypt`, высокая цена ошибки |
+| `auth`      | Java / Spring Boot | `users`, `groups`, `memberships` | редкие записи, дорогой `scrypt`, высокая цена ошибки |
 | `documents` | Java / Spring Boot | `documents`, `document_versions` | CPU: PDFBox, POI; пишет события в Kafka              |
 | `retrieval` | Go, stdlib         | индекс Elasticsearch             | I/O с жёсткими таймаутами, много коротких запросов   |
-| `answer`    | Python / FastAPI   | ничего (stateless)               | сеть: LLM до 90 с, промпты                           |
+| `answer`    | Python / FastAPI   | `vektor_answer`: диалоги, цитаты | сеть: LLM до 90 с, промпты; пул соединений Postgres  |
 | `embedding` | Python / FastAPI   | ничего                           | CPU: ONNX, батчинг                                   |
 | `ingest`    | Python             | индекс (запись)                  | batch: Kafka -> фрагменты -> эмбеддинги -> bulk      |
 

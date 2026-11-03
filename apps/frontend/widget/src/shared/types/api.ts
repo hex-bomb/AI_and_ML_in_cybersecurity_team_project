@@ -39,15 +39,12 @@ export type SearchResponse = {
   request_id: string
 }
 
-export type AnswerTurn = {
-  role: "user" | "assistant"
-  text: string
-}
-
 export type AnswerRequest = {
   question: string
-  /** Предыдущие реплики диалога: сервер берёт последние восемь. */
-  history?: AnswerTurn[]
+  /** Пусто — сервер создаст диалог и вернёт его в ответе. */
+  conversation_id?: string
+  /** Ключ намерения: повтор с тем же ключом не создаёт вторую реплику. */
+  client_message_id?: string
 }
 
 export type Citation = {
@@ -66,6 +63,8 @@ export type AnswerResponse = {
   status: "ok" | "no_evidence"
   answer: string
   citations: Citation[]
+  conversation_id: string
+  turn_id: string
   request_id: string
 }
 
