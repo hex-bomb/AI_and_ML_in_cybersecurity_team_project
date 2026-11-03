@@ -60,6 +60,7 @@ nav:
   - Главная: index.md
   - Архитектура:
       - Обзор: architecture/overview.md
+      - Модель данных: architecture/data-model.md
       - Как расширять: architecture/extensibility.md
   - Сервисы:
       - auth: services/auth.md
