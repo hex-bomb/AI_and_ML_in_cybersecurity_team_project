@@ -1,10 +1,5 @@
-"""Сборка приложения: роуты, метрики, обработчики ошибок.
-
-Здесь нет бизнес-логики: порядок «guard → поиск → LLM» живёт в сценариях
-(``app/usecases``), транспорт только разбирает вход и переводит результат.
-"""
-
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -20,6 +15,8 @@ from app.errors import AppError
 from app.settings import MAX_UPLOAD
 from app.usecases.ask import AskQuestion, Question
 from app.usecases.ask_file import AskAboutFile, FileQuestion
+
+log = logging.getLogger("answer")
 
 log = logging.getLogger("answer")
 
@@ -89,7 +86,7 @@ async def app_error(request: Request, exc: AppError) -> JSONResponse:
 async def unhandled(request: Request, exc: Exception) -> JSONResponse:
     """Наружу — стабильный контракт ошибки, внутрь — стек в логе."""
     log.exception("unhandled error: %s", exc)
-    return await app_error(request, AppError.internal())
+    return error(500, "INTERNAL", "Внутренняя ошибка", rid(request))
 
 
 @app.get("/healthz")

@@ -1,6 +1,10 @@
 server:
   port: 8080
   shutdown: graceful
+  # За роутером getRemoteAddr() должен быть адресом клиента, иначе троттлинг
+  # входа считает всех одним IP и один клиент блокирует чужие логины.
+  # Доверять X-Forwarded-For безопасно только если сервис не опубликован напрямую.
+  forward-headers-strategy: framework
 
 spring:
   application:

@@ -27,6 +27,25 @@ def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
 
+class Unavailable(Exception):
+    """Зависимость недоступна: наружу уходит 503."""
+
+
+class BadRequest(Exception):
+    """Некорректный вход на стороне зависимости: наружу 400."""
+
+
+# documents отвечает 400/413/415 на сам файл, а 401/403 — на токен.
+# Разделяем эти случаи: иначе поломка конфигурации выглядит как «файл не разобран».
+_DOCUMENTS_BAD_INPUT = frozenset({400, 413, 415})
+
+
+def _extract_failure(status: int) -> Exception:
+    if status in _DOCUMENTS_BAD_INPUT:
+        return BadRequest(f"documents {status}")
+    return Unavailable(f"documents {status}")
+
+
 class Clients:
     def __init__(self) -> None:
         self.retrieval_url = env("RETRIEVAL_URL", "http://localhost:8080").rstrip("/")
@@ -36,6 +55,10 @@ class Clients:
         self.internal_token = env("DOCUMENTS_INTERNAL_TOKEN")
         self._jwks = PyJWKClient(env("JWKS_URL"), cache_keys=True)
         self._http = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        # LLM — самая дорогая и самая медленная зависимость: без предела
+        # всплеск запросов упирается в лимиты провайдера и в память процесса.
+        self.llm_concurrency = max(1, int(env("LLM_CONCURRENCY", "8")))
+        self._llm_sem = asyncio.Semaphore(self.llm_concurrency)
 
         # Нативный режим GigaChat: LLM_API_KEY — Authorization key,
         # answer сам обменивает его на 30-минутный access_token (без прокси).
@@ -112,7 +135,7 @@ class Clients:
             headers={"X-Internal-Token": self.internal_token} if self.internal_token else {},
         )
         if 400 <= response.status_code < 500:
-            raise BadRequest("файл не разобран")
+            raise _extract_failure(response.status_code)
         if response.status_code != 200:
             raise Unavailable(f"documents {response.status_code}")
         return response.json()["text"]
@@ -128,19 +151,21 @@ class Clients:
                 {"role": "user", "content": user},
             ],
         }
-        headers = {"Authorization": f"Bearer {self.llm_api_key}"}
-        if self.gigachat is not None:
-            headers = await self._gigachat_headers()
+        async with self._llm_sem:
+            headers = {"Authorization": f"Bearer {self.llm_api_key}"}
+            if self.gigachat is not None:
+                headers = await self._gigachat_headers()
 
-        response = await self._post_chat(payload, headers)
-        # Токен мог истечь досрочно — обменять заново и повторить один раз.
-        if (
-            response.status_code == 401
-            and self.gigachat is not None
-            and not self.gigachat.static_token
-        ):
-            headers = await self._gigachat_headers(force_refresh=True)
             response = await self._post_chat(payload, headers)
+            # Токен мог истечь досрочно — обменять заново и повторить один раз.
+            if (
+                response.status_code == 401
+                and self.gigachat is not None
+                and not self.gigachat.static_token
+            ):
+                headers = await self._gigachat_headers(force_refresh=True)
+                response = await self._post_chat(payload, headers)
+
         if response.status_code != 200:
             raise Unavailable(f"llm {response.status_code}")
         return response.json()["choices"][0]["message"]["content"]

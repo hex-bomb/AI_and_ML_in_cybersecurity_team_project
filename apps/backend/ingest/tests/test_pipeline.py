@@ -1,6 +1,6 @@
 import json
 
-from app.pipeline import bulk_body, chunk_id, index_document, stale_query
+from app.pipeline import bulk_body, chunk_id, index_document, split, stale_query
 
 
 def event() -> dict:
@@ -56,3 +56,24 @@ def test_stale_query_keeps_new_ids() -> None:
     assert {"term": {"kb_id": "kb1"}} in bool_["filter"]
     assert {"term": {"document_id": "d1"}} in bool_["filter"]
     assert bool_["must_not"] == [{"terms": {"chunk_id": ["keep1", "keep2"]}}]
+
+
+def test_split_keeps_text_shorter_than_window() -> None:
+    assert split("Короткий текст.", 1000, 200) == ["Короткий текст."]
+
+
+def test_split_hard_cuts_sentence_longer_than_window() -> None:
+    # Предложение без знаков препинания (таблица, лог) раньше уходило одним
+    # окном длиннее лимита: токенизатор обрезал хвост, и он не индексировался.
+    text = "а" * 2500
+    chunks = split(text, 1000, 200)
+
+    assert chunks[0] == text[:1000]
+    assert all(len(chunk) <= 1000 for chunk in chunks)
+    assert text[-1000:] in "".join(chunks), "хвост текста потерян"
+
+
+def test_split_respects_sentence_boundaries() -> None:
+    text = "Первое предложение. Второе предложение."
+    chunks = split(text, 1000, 200)
+    assert chunks == [text]

@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 from contextlib import asynccontextmanager, suppress
 
 import httpx
@@ -13,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, make_asgi_app
 
-from app.pipeline import bulk_body, index_document, stale_query
+from app.pipeline import bulk_body, index_document, split, stale_query
 
 KAFKA = os.environ.get("KAFKA_BOOTSTRAP", "localhost:9092")
 TOPIC = os.environ.get("KAFKA_TOPIC", "kb.document.upserted")
@@ -33,7 +32,6 @@ DOCUMENTS = Counter("ingest_documents_total", "Documents processed", ["status"])
 CHUNKS = Counter("ingest_chunks_total", "Chunks written")
 
 log = logging.getLogger("ingest")
-_SENTENCE = re.compile(r"(?<=[.!?…])\s+")
 
 # Сколько раз читаем сообщение до того, как сдадим его как безнадёжное.
 MAX_ATTEMPTS = int(os.environ.get("INGEST_MAX_ATTEMPTS", "3"))
@@ -41,36 +39,6 @@ RETRY_BASE_SECONDS = float(os.environ.get("INGEST_RETRY_BASE_SECONDS", "2"))
 
 # Состояние конвейера для healthz: пока задача жива — ok, если умерла — degraded.
 _pipeline_task: asyncio.Task | None = None
-
-
-def split(text: str) -> list[str]:
-    """Нарезать текст на перекрывающиеся окна по предложениям.
-
-    Parameters
-    ----------
-    text : str
-        Полный текст версии документа.
-
-    Returns
-    -------
-    list[str]
-        Окна длиной не больше ``CHUNK_CHARS``.
-    """
-    chunks: list[str] = []
-    current = ""
-    for sentence in (part.strip() for part in _SENTENCE.split(text)):
-        if not sentence:
-            continue
-        if len(current) + len(sentence) + 1 <= CHUNK_CHARS:
-            current = f"{current} {sentence}".strip()
-            continue
-        if current:
-            chunks.append(current)
-        tail = current[-CHUNK_OVERLAP:] if CHUNK_OVERLAP and current else ""
-        current = f"{tail} {sentence}".strip()
-    if current:
-        chunks.append(current)
-    return chunks or [text[:CHUNK_CHARS]]
 
 
 async def ensure_index(client: httpx.AsyncClient) -> None:
@@ -154,7 +122,7 @@ async def handle(client: httpx.AsyncClient, raw: bytes) -> None:
     if response.status_code != 200:
         raise RuntimeError(f"documents {response.status_code}")
 
-    chunks = split(response.text)
+    chunks = split(response.text, CHUNK_CHARS, CHUNK_OVERLAP)
     vectors = await embed(client, chunks)
     written = await replace(client, event, chunks, vectors)
     CHUNKS.inc(written)
