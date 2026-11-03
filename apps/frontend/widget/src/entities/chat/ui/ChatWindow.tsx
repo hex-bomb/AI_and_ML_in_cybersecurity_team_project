@@ -144,7 +144,7 @@ function ChatView() {
                 <MessageScrollerContent className="gap-4 p-3">
                   {messages.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">
-                      Здесь будет список сообщений
+                      Спросите что-нибудь по базе знаний
                     </p>
                   ) : (
                     messages.map((message) => (

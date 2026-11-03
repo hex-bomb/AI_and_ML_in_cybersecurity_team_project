@@ -1,9 +1,4 @@
-import type {
-  AnswerRequest,
-  AnswerResponse,
-  SearchRequest,
-  SearchResponse,
-} from "@/shared/types/api"
+import type { AnswerRequest, AnswerResponse } from "@/shared/types/api"
 import { request } from "./http"
 
 export type ApiCallOptions = {
@@ -13,22 +8,9 @@ export type ApiCallOptions = {
 }
 
 /**
- * Поиск по базе знаний.
+ * Генерация ответа по базе знаний со ссылками на источники.
  * Сессия живёт в httpOnly cookie, поэтому заголовка авторизации здесь нет.
  */
-export function searchDocuments(
-  body: SearchRequest,
-  options: ApiCallOptions,
-): Promise<SearchResponse> {
-  return request<SearchResponse>("/search", {
-    method: "POST",
-    body,
-    apiUrl: options.apiUrl,
-    signal: options.signal,
-  })
-}
-
-/** Генерация ответа по базе знаний со ссылками на источники. */
 export function generateAnswer(
   body: AnswerRequest,
   options: ApiCallOptions,

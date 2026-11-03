@@ -15,7 +15,7 @@ import {
 } from "@/entities/chat/model/chatStore"
 import { useRef, useState } from "react"
 
-/** Список диалогов из IndexedDB. Только shadcn. */
+/** Список диалогов; транскрипты лежат в IndexedDB. */
 export function ChatList() {
   const [query, setQuery] = useState("")
   // Индекс диалога в фокусе: null — фокус в поле поиска.
@@ -32,10 +32,9 @@ export function ChatList() {
   // Диалог, ожидающий подтверждения удаления: null — ничего не удаляем.
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
-  const filtered = query.trim()
-    ? chats.filter((chat) =>
-      `${chat.title} ${chat.preview ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())
-    )
+  const needle = query.trim().toLowerCase()
+  const filtered = needle
+    ? chats.filter((chat) => `${chat.title} ${chat.preview ?? ""}`.toLowerCase().includes(needle))
     : chats
 
   return (
@@ -126,7 +125,7 @@ export function ChatList() {
                     open(chat.id)
                   }}
                   className={`w-full rounded-xl border px-3 py-2 pr-8 text-left text-sm transition-colors ${chat.id === activeId
-                      ? "border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]"
+                      ? "border-brand bg-brand/10 text-brand"
                       : "border-transparent bg-accent hover:bg-accent/80"
                     }`}
                 >
@@ -151,7 +150,7 @@ export function ChatList() {
                       type="button"
                       aria-label="Отмена"
                       onClick={() => setPendingDelete(null)}
-                      className={`flex size-6 items-center justify-center rounded-md transition-colors hover:bg-[#0071e3]/15 ${chat.id === activeId ? "text-[#0071e3]" : "text-muted-foreground"
+                      className={`flex size-6 items-center justify-center rounded-md transition-colors hover:bg-brand/15 ${chat.id === activeId ? "text-brand" : "text-muted-foreground"
                         }`}
                     >
                       <XIcon className="size-3.5" />
@@ -163,7 +162,7 @@ export function ChatList() {
                     aria-label={`Удалить диалог «${chat.preview || chat.title}»`}
                     onClick={() => setPendingDelete(chat.id)}
                     className={`absolute top-1/2 right-1.5 flex size-6 -translate-y-1/2 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100 focus-visible:opacity-100 ${chat.id === activeId
-                        ? "text-[#0071e3] hover:bg-destructive/10 hover:text-destructive"
+                        ? "text-brand hover:bg-destructive/10 hover:text-destructive"
                         : "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       }`}
                   >

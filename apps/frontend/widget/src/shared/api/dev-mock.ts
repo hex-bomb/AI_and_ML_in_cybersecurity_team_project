@@ -1,10 +1,10 @@
-import type { AnswerResponse, SearchHit, SearchResponse } from "../types/api"
+import type { AnswerResponse, SearchHit } from "../types/api"
 
 /**
- * Локальная заглушка API для разработки без backend.
+ * Локальная заглушка API: включается флагом `useMock`, который ставит
+ * aks-widget.js, когда не заданы apiUrl и kbId. В боевом режиме сюда не заходят.
  *
- * Включается только флагом в env — в боевой сборке код не выполняется.
- * DTO совпадают с боевыми, поэтому фронт не меняется при подключении сервера
+ * DTO совпадают с боевыми, поэтому компоненты не знают, откуда пришёл ответ
  * (ТЗ 10.2, шаг 5).
  */
 
@@ -58,17 +58,6 @@ function pick(question: string) {
   return (
     FIXTURES.find((f) => f.hits.some((h) => lower.includes(h.title.toLowerCase()))) ?? FIXTURES[0]!
   )
-}
-
-export async function mockSearch(query: string): Promise<SearchResponse> {
-  await delay(400 + Math.random() * 400)
-
-  if (!query.trim()) {
-    return { status: "no_results", hits: [], request_id: crypto.randomUUID() }
-  }
-
-  const fixture = pick(query)
-  return { status: "ok", hits: fixture.hits, request_id: crypto.randomUUID() }
 }
 
 export async function mockAnswer(question: string): Promise<AnswerResponse> {

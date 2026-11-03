@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { CheckIcon, CopyIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 
@@ -68,13 +68,10 @@ function Caret() {
 /**
  * Индикатор работы над ответом.
  *
- * Стриминга в MVP нет (ТЗ 1.2), поэтому показываем его на всё время запроса.
- * Подпись меняется каждые пару секунд — видно, что виджет занят, и не создаётся
- * впечатления, будто он завис на одной и той же фразе.
+ * Стриминга в MVP нет (ТЗ 1.2), поэтому индикатор висит весь запрос. Подпись
+ * меняется каждые пару секунд — иначе кажется, что виджет завис.
  */
-
-/** Этапы работы виджета: поиск по базе, проверка источников, сборка ответа. */
-const THINKING_STAGES = ["Готовим ответ", "Ищем данные", "Проверяем станки"] as const
+const THINKING_STAGES = ["Готовим ответ", "Ищем в базе знаний", "Собираем цитаты"] as const
 
 const STAGE_INTERVAL_MS = 2200
 
@@ -121,14 +118,24 @@ export function ThinkingBubble() {
 function Feedback({ text }: { text: string }) {
   const [vote, setVote] = useState<"up" | "down" | null>(null)
   const [copied, setCopied] = useState(false)
+  const timer = useRef<number | null>(null)
+
+  // Таймер снимаем при размонтировании: иначе setCopied придёт в мёртвый компонент.
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current)
+    },
+    [],
+  )
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      if (timer.current) window.clearTimeout(timer.current)
+      timer.current = window.setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard blocked (insecure context or denied permission) — leave as is.
+      // Буфер обмена недоступен: insecure context или запрет в настройках браузера.
     }
   }
 

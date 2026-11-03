@@ -1,5 +1,5 @@
 import type { LoginUser, MeResponse } from "@/shared/types/api"
-import { request } from "./http"
+import { ApiRequestError, request } from "./http"
 
 export type AuthOptions = {
   apiUrl?: string
@@ -18,7 +18,7 @@ export async function fetchSession(options: AuthOptions = {}): Promise<LoginUser
     })
     return payload.user
   } catch (error) {
-    if (isStatus(error, 401)) return null
+    if (error instanceof ApiRequestError && error.status === 401) return null
     throw error
   }
 }
@@ -44,13 +44,4 @@ export function signOut(options: AuthOptions = {}): Promise<unknown> {
     apiUrl: options.apiUrl,
     signal: options.signal,
   })
-}
-
-function isStatus(error: unknown, status: number): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "status" in error &&
-    (error as { status: unknown }).status === status
-  )
 }
