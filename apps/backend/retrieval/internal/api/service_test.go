@@ -57,7 +57,7 @@ func service(t *testing.T, esFail, embedFail bool) *HybridSearch {
 }
 
 func scope() search.Scope {
-	return search.Scope{KB: "kb", Audiences: []string{"public"}}
+	return search.Scope{Channels: []string{"public"}, Groups: []string{}}
 }
 
 func TestSearchFallsBackToLexicalWhenEmbeddingFails(t *testing.T) {

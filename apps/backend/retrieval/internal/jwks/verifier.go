@@ -21,13 +21,23 @@ import (
 
 // Claims — содержимое токена сессии.
 type Claims struct {
-	Sub    string   `json:"sub"`
-	Name   string   `json:"name"`
-	Role   string   `json:"role"`
-	Tenant string   `json:"tenant"`
-	KB     string   `json:"kb"`
-	Scp    []string `json:"scp"`
-	Exp    int64    `json:"exp"`
+	Sub  string   `json:"sub"`
+	Name string   `json:"name"`
+	Role string   `json:"role"`
+	Scp  []string `json:"scp"`
+	Grp  []string `json:"grp"`
+	Exp  int64    `json:"exp"`
+}
+
+// Channels — каналы, в которых principal может читать документы.
+// Сотрудник видит и внутренние: auth раскладывает роль в scopes, а не в fields.
+func (c Claims) Channels() []string {
+	for _, scope := range c.Scp {
+		if scope == "employee" {
+			return []string{"public", "internal"}
+		}
+	}
+	return []string{"public"}
 }
 
 type jwk struct {

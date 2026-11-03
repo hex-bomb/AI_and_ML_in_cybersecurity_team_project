@@ -21,7 +21,7 @@ func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
 	esURL := env("ES_URL", "http://localhost:9200")
-	esIndex := env("ES_INDEX", "vektor-chunks")
+	esIndex := env("ES_INDEX", "vektor-chunks-v2")
 	embeddingURL := env("EMBEDDING_URL", "http://localhost:8000")
 	addr := env("ADDR", ":8080")
 	jwksURL := env("JWKS_URL", "http://localhost:8080/.well-known/jwks.json")

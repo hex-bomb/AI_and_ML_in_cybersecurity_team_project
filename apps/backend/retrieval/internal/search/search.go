@@ -32,10 +32,10 @@ type Locator struct {
 	PageEnd     *int     `json:"page_end"`
 }
 
-// Scope — база знаний и аудитории, которым разрешён поиск.
+// Scope — каналы и группы principal'а, которым разрешён поиск.
 type Scope struct {
-	KB        string
-	Audiences []string
+	Channels []string
+	Groups   []string
 }
 
 // Size — сколько кандидатов просить у каждой ветки: с запасом на слияние
@@ -46,10 +46,26 @@ func Size(topK int) int {
 
 // scopeFilter — один фильтр на обе ветки: иначе лексика и kNN видят разные
 // документы.
+//
+// Условия отражают правило доступа сервиса documents: документ виден, если
+// опубликован, его канал входит в каналы principal'а и либо он открыт всем
+// в канале, либо его группа есть у principal'а.
 func scopeFilter(s Scope) []any {
+	groups := s.Groups
+	if groups == nil {
+		// nil сериализуется в null, а terms с null Elasticsearch отвергает.
+		groups = []string{}
+	}
 	return []any{
-		map[string]any{"term": map[string]any{"kb_id": s.KB}},
-		map[string]any{"terms": map[string]any{"audience": s.Audiences}},
+		map[string]any{"term": map[string]any{"published": true}},
+		map[string]any{"terms": map[string]any{"channels": s.Channels}},
+		map[string]any{"bool": map[string]any{
+			"minimum_should_match": 1,
+			"should": []any{
+				map[string]any{"term": map[string]any{"open": true}},
+				map[string]any{"terms": map[string]any{"group_keys": groups}},
+			},
+		}},
 	}
 }
 
