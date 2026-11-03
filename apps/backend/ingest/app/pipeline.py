@@ -1,4 +1,4 @@
-"""Чистое ядро ингеста: нарезка текста, идентификаторы, маппинг в документ ES."""
+"""Чистое ядро ингеста: нарезка текста, идентификаторы, тела запросов ES."""
 
 import hashlib
 import json
@@ -70,19 +70,28 @@ def index_document(
     position: int,
     index: str,
 ) -> dict:
-    """Собрать документ для bulk-записи в Elasticsearch."""
-    identifier = chunk_id(event["document_id"], event["version_id"], position, text)
+    """Собрать документ для bulk-записи в Elasticsearch.
+
+    ``document_id`` — публичный ключ (external_id), он уходит в ссылки и цитаты.
+    ``document_ref`` — внутренний uuid, по нему ингест обновляет и удаляет
+    фрагменты, не зная публичных идентификаторов.
+    """
+    identifier = chunk_id(event["external_id"], event["version_id"], position, text)
     document = {
         "chunk_id": identifier,
-        "document_id": event["document_id"],
+        "document_id": event["external_id"],
+        "document_ref": event["document_id"],
         "version_id": event["version_id"],
-        "kb_id": event["kb_id"],
         "title": event.get("title") or "",
         "text": text,
         "section_path": [],
-        "audience": event["audience"],
         "page_start": None,
         "page_end": None,
+        # До публикации фрагмент не виден поиску: visibility выставляет событие.
+        "published": False,
+        "channels": [],
+        "group_keys": [],
+        "open_to_all": False,
     }
     if vector is not None:
         document["embedding"] = vector
@@ -98,16 +107,73 @@ def bulk_body(operations: list[tuple[dict, dict]]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def stale_query(kb_id: str, document_id: str, keep_ids: list[str]) -> dict:
-    """Запрос удаления устаревших фрагментов: не трогает только что записанные."""
+def stale_query(document_ref: str, version_id: str, keep_ids: list[str]) -> dict:
+    """Остатки прошлого прохода по той же версии: их не должно остаться."""
     return {
         "query": {
             "bool": {
                 "filter": [
-                    {"term": {"kb_id": kb_id}},
-                    {"term": {"document_id": document_id}},
+                    {"term": {"document_ref": document_ref}},
+                    {"term": {"version_id": version_id}},
                 ],
                 "must_not": [{"terms": {"chunk_id": keep_ids}}],
             }
         }
+    }
+
+
+def published_query(
+    document_ref: str,
+    version_id: str,
+    channels: list[str],
+    group_keys: list[str],
+) -> dict:
+    """Публикация: чанки этой версии становятся видимыми в указанных каналах."""
+    return {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"term": {"document_ref": document_ref}},
+                    {"term": {"version_id": version_id}},
+                ]
+            }
+        },
+        "doc": {
+            "published": True,
+            "channels": channels,
+            "group_keys": group_keys,
+            "open_to_all": not group_keys,
+        },
+    }
+
+
+def superseded_query(document_ref: str, version_id: str) -> dict:
+    """Предыдущие версии остаются в индексе, но поиск их больше не видит."""
+    return {
+        "query": {
+            "bool": {
+                "filter": [{"term": {"document_ref": document_ref}}],
+                "must_not": [{"term": {"version_id": version_id}}],
+            }
+        },
+        "doc": {"published": False},
+    }
+
+
+def access_query(document_ref: str, channels: list[str], group_keys: list[str]) -> dict:
+    """Смена грантов у опубликованного документа."""
+    return {
+        "query": {"bool": {"filter": [{"term": {"document_ref": document_ref}}]}},
+        "doc": {
+            "channels": channels,
+            "group_keys": group_keys,
+            "open_to_all": not group_keys,
+        },
+    }
+
+
+def withdrawn_query(document_ref: str) -> dict:
+    return {
+        "query": {"bool": {"filter": [{"term": {"document_ref": document_ref}}]}},
+        "doc": {"published": False},
     }

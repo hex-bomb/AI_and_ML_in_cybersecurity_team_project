@@ -1,14 +1,24 @@
 import json
 
-from app.pipeline import bulk_body, chunk_id, index_document, split, stale_query
+from app.pipeline import (
+    access_query,
+    bulk_body,
+    chunk_id,
+    index_document,
+    published_query,
+    split,
+    stale_query,
+    superseded_query,
+    withdrawn_query,
+)
 
 
 def event() -> dict:
     return {
-        "document_id": "d1",
+        "document_id": "8f14e45f-ceea-467a-a1b2-3c4d5e6f7a8b",
+        "external_id": "d1",
         "version_id": "v1",
-        "kb_id": "kb1",
-        "audience": "public",
+        "generation": 1,
         "title": "T",
     }
 
@@ -36,6 +46,15 @@ def test_index_document_embeds_vector_only_when_present() -> None:
     assert "embedding" not in without["document"]
 
 
+def test_indexed_chunk_is_not_searchable_until_published() -> None:
+    document = index_document(event(), "текст", None, 0, "idx")["document"]
+    assert document["published"] is False
+    assert document["channels"] == []
+    # Публичный ключ и внутренняя ссылка — разные поля.
+    assert document["document_id"] == "d1"
+    assert document["document_ref"] == event()["document_id"]
+
+
 def test_bulk_body_is_valid_ndjson() -> None:
     ops = [
         index_document(event(), "a", None, 0, "idx"),
@@ -51,11 +70,39 @@ def test_bulk_body_is_valid_ndjson() -> None:
 
 
 def test_stale_query_keeps_new_ids() -> None:
-    query = stale_query("kb1", "d1", ["keep1", "keep2"])
+    query = stale_query("ref", "v1", ["keep1", "keep2"])
     bool_ = query["query"]["bool"]
-    assert {"term": {"kb_id": "kb1"}} in bool_["filter"]
-    assert {"term": {"document_id": "d1"}} in bool_["filter"]
+    assert {"term": {"document_ref": "ref"}} in bool_["filter"]
+    assert {"term": {"version_id": "v1"}} in bool_["filter"]
     assert bool_["must_not"] == [{"terms": {"chunk_id": ["keep1", "keep2"]}}]
+
+
+def test_published_query_opens_only_listed_channels() -> None:
+    query = published_query("ref", "v1", ["internal"], ["legal"])
+    doc = query["doc"]
+    assert doc["published"] is True
+    assert doc["channels"] == ["internal"]
+    assert doc["open_to_all"] is False
+
+    # Грант без группы видит весь канал.
+    assert published_query("ref", "v1", ["public"], [])["doc"]["open_to_all"] is True
+
+
+def test_superseded_and_withdrawn_hide_document() -> None:
+    superseded = superseded_query("ref", "v2")
+    assert superseded["doc"] == {"published": False}
+    assert {"term": {"version_id": "v2"}} in superseded["query"]["bool"]["must_not"]
+
+    assert withdrawn_query("ref")["doc"] == {"published": False}
+
+
+def test_access_query_updates_published_chunks() -> None:
+    query = access_query("ref", ["public", "internal"], [])
+    assert query["doc"] == {
+        "channels": ["public", "internal"],
+        "group_keys": [],
+        "open_to_all": True,
+    }
 
 
 def test_split_keeps_text_shorter_than_window() -> None:
