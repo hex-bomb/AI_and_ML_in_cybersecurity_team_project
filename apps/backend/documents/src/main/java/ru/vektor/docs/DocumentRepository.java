@@ -30,6 +30,13 @@ public class DocumentRepository {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Сохраняет версию документа, создавая сам документ при первом появлении.
+     *
+     * <p>Версия уникальна по паре {@code (document_id, content_sha256)}: повторная
+     * загрузка того же текста не плодит версии, а возвращает существующую
+     * с {@code created = false}.
+     */
     @Transactional
     public Version upsert(String kbId, String externalId, String title, String audience,
                           String section, String text, String versionLabel) {

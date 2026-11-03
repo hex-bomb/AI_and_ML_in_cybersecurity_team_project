@@ -47,7 +47,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff==0.6.9 pytest==8.3.3 pyyaml==6.0.2 httpx==0.27.2 fastapi==0.115.0
+      # Зависимости тестов — те же, что в apps/backend/answer/pyproject.toml.
+      - run: >-
+          pip install ruff==0.6.9 pytest==8.3.3 pyyaml==6.0.2 fastapi==0.115.0
+          httpx==0.27.2 "pyjwt[crypto]==2.9.0" prometheus-client==0.21.0
+          python-multipart==0.0.9
       - run: ruff check apps/backend infra/scripts
       - run: ruff format --check apps/backend infra/scripts
       - run: python -m pytest apps/backend/answer/tests -q
@@ -102,7 +106,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install semgrep==1.94.0
+      # Без пина: 1.94.0 падает на Python 3.12 раннера при импорте opentelemetry.
+      - run: pip install semgrep
       - run: semgrep --config .semgrep --severity=ERROR --error --metrics=off
 
   compose:
@@ -127,5 +132,3 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-
-  security:

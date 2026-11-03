@@ -79,7 +79,8 @@ func NewEmbedder(url string, client *http.Client) *Embedder {
 	return &Embedder{url: url, http: client}
 }
 
-// Embed превращает текст в вектор.
+// Embed превращает текст в вектор. kind=query сообщает сервису, что кодируется
+// поисковый запрос, а не документ.
 func (e *Embedder) Embed(ctx context.Context, text string) ([]float64, error) {
 	body, err := json.Marshal(map[string]any{"texts": []string{text}, "kind": "query"})
 	if err != nil {

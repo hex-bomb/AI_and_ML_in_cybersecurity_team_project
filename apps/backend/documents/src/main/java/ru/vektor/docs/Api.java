@@ -178,7 +178,8 @@ public class Api {
     ) {
         var claims = auth.verify(token);
         var document = documents.latest(claims.kb(), externalId);
-        // «Нет документа» и «нет прав» неразличимы снаружи.
+        // Нет прав отдаём как «нет документа»: иначе 403 раскрывает,
+        // что такой документ существует.
         if (document.isEmpty() || !claims.canRead(document.get().audience())) {
             throw Errors.notFound();
         }
@@ -325,6 +326,7 @@ public class Api {
 
     private static String externalId(byte[] content) throws Exception {
         var digest = MessageDigest.getInstance("SHA-256").digest(content);
+        // 16 hex-символов — короткий id для URL; полный хеш хранится в версии.
         return HexFormat.of().formatHex(digest).substring(0, 16);
     }
 

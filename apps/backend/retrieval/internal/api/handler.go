@@ -1,4 +1,4 @@
-// Package api — HTTP-слой: маршруты, авторизация, метрики.
+// Package api реализует HTTP-слой сервиса: маршруты, авторизацию и метрики.
 package api
 
 import (
@@ -15,6 +15,8 @@ import (
 	"vektor/retrieval/internal/search"
 )
 
+// requestTimeout ограничивает весь поиск: embedding и запросы к ES.
+// Серверный WriteTimeout должен быть больше этого дедлайна.
 const requestTimeout = 15 * time.Second
 
 // SearchRequest — тело POST /api/v1/search.
@@ -24,7 +26,7 @@ type SearchRequest struct {
 	TopK  int    `json:"top_k"`
 }
 
-// SearchResponse — ответ на поиск.
+// SearchResponse — ответ POST /api/v1/search; Status принимает "ok" или "no_results".
 type SearchResponse struct {
 	Status    string       `json:"status"`
 	Hits      []search.Hit `json:"hits"`
@@ -36,7 +38,7 @@ type SearchService interface {
 	Search(ctx context.Context, scope search.Scope, query string, topK int) ([]search.Hit, error)
 }
 
-// Handler собирает маршруты сервиса.
+// Handler держит зависимости HTTP-слоя; маршруты регистрирует Routes.
 type Handler struct {
 	search   SearchService
 	verifier *jwks.Verifier
@@ -107,6 +109,7 @@ func (h *Handler) searchHandler(w http.ResponseWriter, r *http.Request, claims j
 		writeJSON(w, http.StatusOK, SearchResponse{Status: "no_results", Hits: []search.Hit{}, RequestID: rid})
 		return
 	}
+	// Пустой scp — ни одной разрешённой аудитории, значит доступа нет.
 	if len(claims.Scp) == 0 {
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "Доступ запрещён", rid)
 		return
@@ -141,6 +144,8 @@ func tokenFrom(r *http.Request) string {
 }
 
 func requestID(r *http.Request) string {
+	// Клиентский X-Request-ID уходит обратно в ответ и в тело ошибки,
+	// поэтому длину ограничиваем.
 	const maxLen = 128
 	if v := r.Header.Get("X-Request-ID"); v != "" && len(v) <= maxLen {
 		return v

@@ -7,7 +7,6 @@ def test_slices_keeps_short_paragraphs_together() -> None:
 
 
 def test_slices_cuts_long_paragraph_without_losing_tail() -> None:
-    # Раньше хвост такого абзаца терялся молча.
     text = "а" * 2500
     parts = slices(text, 1000)
     assert len(parts) == 3
@@ -33,7 +32,7 @@ def test_rank_orders_by_query_similarity() -> None:
 def test_rank_falls_back_to_order_when_query_missing() -> None:
     chunks = ["a", "b", "c"]
     vectors = [[1.0, 0.0], None, [0.0, 1.0]]
-    # Есть None-вектор — деградация: первые top_k в исходном порядке.
+    # Один None-вектор переводит всю выдачу в деградацию, даже если query есть.
     assert rank(chunks, vectors, None, 2) == ["a", "b"]
     assert rank(chunks, vectors, [1.0, 0.0], 2) == ["a", "b"]
 

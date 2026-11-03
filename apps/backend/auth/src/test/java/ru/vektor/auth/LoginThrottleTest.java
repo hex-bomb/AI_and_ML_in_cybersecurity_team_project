@@ -62,7 +62,7 @@ class LoginThrottleTest {
         );
     }
 
-    /** Управляемые часы: тест не зависит от реального времени. */
+    /** Часы с ручным ходом: тесты не ждут реальные окна. */
     private static final class TickClock extends Clock {
 
         private Instant now;

@@ -76,6 +76,7 @@ def test_expiry_in_seconds_is_accepted() -> None:
 
 
 def test_static_jwt_passes_through_without_http() -> None:
+    # http не нужен: ключ — уже готовый JWT, обмен не выполняется.
     auth = GigaChatAuth(http=None, key="eyJhbGciOiJSUzI1NiJ9.sig")  # type: ignore[arg-type]
     assert auth.static_token
     assert run(auth.bearer()) == "eyJhbGciOiJSUzI1NiJ9.sig"

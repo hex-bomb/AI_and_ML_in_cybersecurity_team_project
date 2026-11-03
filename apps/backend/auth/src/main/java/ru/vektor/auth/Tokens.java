@@ -89,6 +89,12 @@ public class Tokens {
         return jwt.serialize();
     }
 
+    /**
+     * Проверяет подпись и срок жизни токена; {@code issuer} не проверяется.
+     *
+     * @throws java.text.ParseException если токен не разбирается как JWT
+     * @throws IllegalStateException если подпись не сходится или срок истёк
+     */
     public JWTClaimsSet verify(String token) throws Exception {
         var jwt = SignedJWT.parse(token);
         if (!jwt.verify(new RSASSAVerifier(key.toPublicJWK()))) {
