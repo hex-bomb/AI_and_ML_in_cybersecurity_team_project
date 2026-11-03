@@ -9,12 +9,13 @@
 
 ## Как читать
 
-| Что нужно                                   | Куда идти                                                              |
-| ------------------------------------------- | ---------------------------------------------------------------------- |
-| Поднять стенд и проверить, что всё живо     | [environments/local-development.md](environments/local-development.md) |
-| Посмотреть эндпоинты, лимиты и коды ошибок  | [reference/api.md](reference/api.md)                                   |
-| Понять, почему сервисы разделены именно так | [architecture/overview.md](architecture/overview.md)                   |
-| Найти значение термина                      | [glossary.md](glossary.md)                                             |
+| Что нужно                                         | Куда идти                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------------- |
+| Поднять стенд и проверить, что всё живо           | [environments/local-development.md](environments/local-development.md) |
+| Посмотреть эндпоинты, лимиты и коды ошибок        | [reference/api.md](reference/api.md)                                   |
+| Понять, почему сервисы разделены именно так       | [architecture/overview.md](architecture/overview.md)                   |
+| Добавить эндпоинт, провайдера, событие или сервис | [architecture/extensibility.md](architecture/extensibility.md)         |
+| Найти значение термина                            | [glossary.md](glossary.md)                                             |
 
 ## Состав
 

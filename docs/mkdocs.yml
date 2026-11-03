@@ -53,7 +53,9 @@ markdown_extensions:
 
 nav:
   - Главная: index.md
-  - Архитектура: architecture/overview.md
+  - Архитектура:
+      - Обзор: architecture/overview.md
+      - Как расширять: architecture/extensibility.md
   - Сервисы:
       - auth: services/auth.md
       - documents: services/documents.md
