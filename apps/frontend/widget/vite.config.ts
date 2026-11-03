@@ -33,7 +33,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(root, "./src"),
-      // shadcn registry files import the cn helper as a bare specifier.
+      // Файлы из реестра shadcn импортируют `cn` голым спецификатором.
       cn: path.resolve(root, "./src/lib/utils.ts"),
     },
   },

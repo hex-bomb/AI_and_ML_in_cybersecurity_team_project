@@ -10,25 +10,25 @@ import type {
 } from "@/shared/types/chat"
 
 /**
- * Local persistence. Chats and messages never leave the browser — the server
- * only ever receives generation requests. Both tables live in one IndexedDB
- * database so a message write and the chat's `updatedAt` bump stay atomic.
+ * Локальное хранилище. Диалоги и сообщения не уходят на сервер — он получает
+ * только запросы на генерацию. Обе таблицы живут в одной базе IndexedDB,
+ * поэтому запись сообщения и обновление `updatedAt` диалога атомарны.
  */
 
-/** Row shape of `chats`: metadata only, the transcript is a separate table. */
+/** Строка таблицы `chats`: только метаданные, транскрипт лежит отдельно. */
 type ChatRow = {
   id: string
   title: string
   createdAt: string
-  /** Last write time. Used to reorder the sidebar; `createdAt` never changes. */
+  /** Время последней записи: по нему сортируется список; `createdAt` не меняется. */
   updatedAt: string
-  /** Text of the last message, kept denormalised for the sidebar. */
+  /** Текст последнего сообщения — денормализация ради списка диалогов. */
   preview: string
   pinned?: boolean
   unread?: boolean
 }
 
-/** Row shape of `messages`. */
+/** Строка таблицы `messages`. */
 type MessageRow = {
   id: string
   chatId: string
@@ -61,7 +61,7 @@ export function setStoreRole(role: string) {
 function db(): Store {
   if (current) return current
   const instance = new Dexie(`chat-widget-${scope}`) as Store
-  // `&id` is the primary key. Changing the index list requires a schema version bump.
+  // `&id` — первичный ключ. Новый индекс требует новой версии схемы Dexie.
   instance.version(1).stores({
     chats: "&id, title, createdAt, updatedAt",
     messages: "&id, chatId, createdAt, [chatId+createdAt]",
@@ -74,30 +74,30 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-/** `crypto.randomUUID` needs a secure context; fall back for plain http embeds. */
+/** `crypto.randomUUID` есть только в secure context — для http-встраивания фолбэк. */
 function newId(): string {
   const cryptoRef = globalThis.crypto
   if (cryptoRef?.randomUUID) return cryptoRef.randomUUID()
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-/** Chat rows have no transcript of their own; callers read it with getMessages. */
+/** В строке диалога нет транскрипта: его читают через getMessages. */
 function toChat(row: ChatRow): Chat {
   return { ...row, messages: [] }
 }
 
-/** Sidebar order: newest first. */
+/** Порядок в списке: новые сверху. */
 export async function listChats(): Promise<Chat[]> {
   const rows = await db().chats.orderBy("createdAt").reverse().toArray()
   return rows.map(toChat)
 }
 
-/** Transcript order: oldest first. */
+/** Порядок в транскрипте: старые сверху. */
 export async function getMessages(chatId: string): Promise<Message[]> {
   return db().messages.where("chatId").equals(chatId).sortBy("createdAt")
 }
 
-/** Creates an empty conversation, optionally pre-titled. */
+/** Создаёт пустой диалог; заголовок можно задать сразу. */
 export async function createChat(title = "Новый диалог"): Promise<Chat> {
   const createdAt = nowIso()
   const row: ChatRow = {
@@ -111,7 +111,7 @@ export async function createChat(title = "Новый диалог"): Promise<Cha
   return toChat(row)
 }
 
-/** Removes the conversation and its messages together. */
+/** Удаляет диалог вместе с сообщениями в одной транзакции. */
 export async function deleteChat(chatId: string): Promise<void> {
   const store = db()
   await store.transaction("rw", store.chats, store.messages, async () => {
@@ -121,10 +121,10 @@ export async function deleteChat(chatId: string): Promise<void> {
 }
 
 /**
- * Appends a message and refreshes the chat's sidebar fields in one transaction,
- * so the list order and the transcript can never disagree.
+ * Дописывает сообщение и обновляет поля диалога для списка в одной транзакции:
+ * порядок в списке и транскрипт не могут разойтись.
  *
- * `id` and `createdAt` are filled in when the caller leaves them out.
+ * `id` и `createdAt` заполняются, если вызывающий их не передал.
  */
 export async function appendMessage(chatId: string, message: NewMessage): Promise<Message> {
   const createdAt = message.createdAt ?? nowIso()
