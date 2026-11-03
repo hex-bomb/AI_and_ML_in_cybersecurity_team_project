@@ -92,7 +92,7 @@ const appendMessageFx = createEffect(
  */
 const answerFx = createEffect(
   async ({ question, history }: { question: string; history: AnswerTurn[] }): Promise<AnswerResponse> => {
-    const { apiUrl, kbId, useMock } = $config.getState()
+    const { apiUrl, useMock } = $config.getState()
     if (useMock) return mockAnswer(question)
 
     if ($session.getState() === null) {
@@ -104,7 +104,7 @@ const answerFx = createEffect(
     }
 
     try {
-      return await generateAnswer({ kb_id: kbId, question, history }, { apiUrl })
+      return await generateAnswer({ question, history }, { apiUrl })
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 401) sessionCleared()
       throw error

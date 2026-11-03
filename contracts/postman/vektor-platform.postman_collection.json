@@ -94,7 +94,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"query\":\"гарантия на станки\",\"top_k\":3}"
+       "raw": "{\"query\":\"гарантия на станки\",\"top_k\":3}"
       },
       "url": "{{baseUrl}}/api/v1/search"
      }
@@ -111,7 +111,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"query\":\"внутренний прайс скидки маржа\",\"top_k\":5}"
+       "raw": "{\"query\":\"внутренний прайс скидки маржа\",\"top_k\":5}"
       },
       "url": "{{baseUrl}}/api/v1/search"
      }
@@ -128,7 +128,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"question\":\"какая гарантия на станки?\",\"history\":[]}"
+       "raw": "{\"question\":\"какая гарантия на станки?\",\"history\":[]}"
       },
       "url": "{{baseUrl}}/api/v1/answers"
      }
@@ -145,7 +145,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"question\":\"а на лизинг?\",\"history\":[{\"role\":\"user\",\"text\":\"какая гарантия на станки?\"},{\"role\":\"assistant\",\"text\":\"24 месяца.\"}]}"
+       "raw": "{\"question\":\"а на лизинг?\",\"history\":[{\"role\":\"user\",\"text\":\"какая гарантия на станки?\"},{\"role\":\"assistant\",\"text\":\"24 месяца.\"}]}"
       },
       "url": "{{baseUrl}}/api/v1/answers"
      }

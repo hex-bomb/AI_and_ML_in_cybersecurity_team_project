@@ -17,7 +17,6 @@ export type Locator = {
 }
 
 export type SearchRequest = {
-  kb_id: string
   query: string
   top_k?: number
 }
@@ -46,7 +45,6 @@ export type AnswerTurn = {
 }
 
 export type AnswerRequest = {
-  kb_id: string
   question: string
   /** Предыдущие реплики диалога: сервер берёт последние восемь. */
   history?: AnswerTurn[]

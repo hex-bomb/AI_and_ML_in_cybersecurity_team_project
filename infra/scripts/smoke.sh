@@ -13,13 +13,13 @@ echo
 
 echo -n "search:   "
 code -b "$JAR" -H 'Content-Type: application/json' \
-  -d '{"kb_id":"74ade984-591f-4382-a051-ef1898855868","query":"гарантия","top_k":3}' \
+  -d '{"query":"гарантия","top_k":3}' \
   "$BASE/api/v1/search"
 echo
 
 echo -n "answer:   "
 code -b "$JAR" -H 'Content-Type: application/json' \
-  -d '{"kb_id":"74ade984-591f-4382-a051-ef1898855868","question":"какая гарантия на станки?"}' \
+  -d '{"question":"какая гарантия на станки?"}' \
   "$BASE/api/v1/answers"
 echo
 
