@@ -20,6 +20,7 @@ from app.pipeline import (
     split,
     stale_query,
     superseded_query,
+    update_body,
     withdrawn_query,
 )
 
@@ -160,10 +161,18 @@ async def report_ready(
 
 
 async def apply(client: httpx.AsyncClient, body: dict) -> None:
+    """Применить частичное обновление к отобранным чанкам.
+
+    ``_update_by_query`` не принимает поле ``doc``: его нужно передать через
+    скрипт. Статус проверяется явно — иначе 400 от Elasticsearch проходит
+    молча и публикация «удаётся», ничего не меняя.
+    """
     response = await client.post(
         f"{ES_URL}/{ES_INDEX}/_update_by_query?conflicts=proceed&refresh={REFRESH}",
-        json=body,
+        json=update_body(body),
     )
+    if response.status_code != 200:
+        raise RuntimeError(f"update_by_query {response.status_code}: {response.text[:200]}")
     payload = response.json()
     if payload.get("failures"):
         raise RuntimeError(f"update_by_query: {payload['failures']}")

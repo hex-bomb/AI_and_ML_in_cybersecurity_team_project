@@ -177,3 +177,19 @@ def withdrawn_query(document_ref: str) -> dict:
         "query": {"bool": {"filter": [{"term": {"document_ref": document_ref}}]}},
         "doc": {"published": False},
     }
+
+
+def update_body(body: dict) -> dict:
+    """Превратить запрос обновления в тело ``_update_by_query``.
+
+    Частичное обновление там задаётся только скриптом: поле ``doc`` принимает
+    ``_update``, а не ``_update_by_query``, и без перевода Elasticsearch
+    отвечает 400.
+    """
+    return {
+        "query": body["query"],
+        "script": {
+            "source": "ctx._source.putAll(params.doc)",
+            "params": {"doc": body.get("doc", {})},
+        },
+    }

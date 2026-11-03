@@ -9,6 +9,7 @@ from app.pipeline import (
     split,
     stale_query,
     superseded_query,
+    update_body,
     withdrawn_query,
 )
 
@@ -122,3 +123,18 @@ def test_split_respects_sentence_boundaries() -> None:
     text = "Первое предложение. Второе предложение."
     chunks = split(text, 1000, 200)
     assert chunks == [text]
+
+
+def test_update_body_uses_script_not_doc() -> None:
+    # _update_by_query не принимает поле doc: нужен скрипт, иначе 400.
+    body = update_body(published_query("ref", "v1", ["public"], []))
+
+    assert "doc" not in body
+    assert body["script"]["params"]["doc"]["published"] is True
+    assert body["script"]["params"]["doc"]["channels"] == ["public"]
+
+
+def test_update_body_keeps_query() -> None:
+    query = withdrawn_query("ref")
+
+    assert update_body(query)["query"] == query["query"]
