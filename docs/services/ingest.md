@@ -9,21 +9,32 @@
 - `GET /healthz` — состояние конвейера (не просто процесса).
 - `/metrics`.
 
-Читает топик `kb.document.upserted`, пишет в индекс `vektor-chunks`. Не принимает
+Читает топик `documents`, пишет в индекс `vektor-chunks-v2`. Не принимает
 HTTP-запросов на запись — вход только через Kafka.
 
 ## Контракт
 
-Событие (см. `docs/services/documents.md`): `document_id`, `version_id`, `kb_id`,
-`audience`, `title`.
+Четыре события (см. `docs/services/documents.md`):
 
-Порядок при обработке:
+| Событие                    | Что делает ингест                                         |
+| -------------------------- | --------------------------------------------------------- |
+| `document.version.created` | разбирает текст, строит индекс, отчитывается о готовности |
+| `document.published`       | открывает каналы и гасит предыдущие версии                |
+| `document.access.changed`  | обновляет `channels` и `group_keys`                       |
+| `document.withdrawn`       | снимает `published` со всех чанков документа              |
 
-1. Текст версии — `GET /internal/documents/.../text` c `X-Internal-Token`.
+Поля события версии: `document_id` (внутренний uuid), `external_id`, `version_id`,
+`generation`, `title`, `content_sha256`.
+
+Порядок при обработке версии:
+
+1. Текст версии — `GET /internal/documents/.../versions/.../text` c `X-Internal-Token`.
 2. Нарезка на окна по предложениям (`CHUNK_CHARS` с перекрытием `CHUNK_OVERLAP`).
 3. Эмбеддинги — `POST /embed`.
-4. Bulk-запись новых фрагментов, **затем** удаление старых (`_delete_by_query`) —
-   окна «документа нет» не возникает.
+4. Bulk-запись новых фрагментов, **затем** удаление остатков той же версии —
+   окна «документа нет» не возникает. Фрагменты пишутся с `published = false`.
+5. `POST /internal/versions/{id}/index` с номером генерации: `documents`
+   сравнит его и поставит версии `ready`. Устаревший отчёт отклоняется.
 
 `chunk_id` — детерминированный SHA-256 от документа, версии, позиции и текста,
 поэтому повторная индексация идемпотентна и не плодит дубликаты.
@@ -52,12 +63,13 @@ HTTP-запросов на запись — вход только через Kaf
 | Переменная                      | По умолчанию                              | Назначение                           |
 | ------------------------------- | ----------------------------------------- | ------------------------------------ |
 | `KAFKA_BOOTSTRAP`               | `localhost:9092`                          | Брокер                               |
-| `KAFKA_TOPIC`                   | `kb.document.upserted`                    | Топик                                |
+| `KAFKA_TOPIC`                   | `documents`                               | Топик событий                        |
 | `KAFKA_GROUP`                   | `ingest`                                  | Группа консьюмеров                   |
-| `ES_URL` / `ES_INDEX`           | `http://localhost:9200` / `vektor-chunks` | Индекс                               |
+| `ES_URL` / `ES_INDEX`           | `http://localhost:9200` / `vektor-chunks-v2` | Индекс                               |
 | `DOCUMENTS_URL`                 | `http://localhost:8080`                   | Источник текстов                     |
 | `DOCUMENTS_INTERNAL_TOKEN`      | —                                         | Секрет `/internal/*`; пусто = отказ  |
 | `EMBEDDING_URL`                 | `http://localhost:8000`                   | Сервис эмбеддингов                   |
+| `EMBEDDING_MODEL`               | `onnx-local`                              | Идентификатор модели для генерации   |
 | `CHUNK_CHARS` / `CHUNK_OVERLAP` | `1200` / `200`                            | Нарезка, символы                     |
 | `EMBEDDING_DIMS`                | `384`                                     | Размерность вектора                  |
 | `INGEST_MAX_ATTEMPTS`           | `3`                                       | Попыток на сообщение                 |

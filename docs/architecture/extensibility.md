@@ -137,7 +137,7 @@ class AskQuestion:
         reason = blocked_reason(question.text)
         if reason:
             raise AppError.forbidden("Запрос отклонён политикой безопасности", {"reason": reason})
-        hits = await self._retriever.search(question.kb_id, question.text, self._top_k, question.token)
+        hits = await self._retriever.search(question.text, self._top_k, question.token)
         if not hits:
             return {"status": "no_evidence", "answer": NO_EVIDENCE, "citations": []}
         return await answer_from_hits(self._completer, question.text, question.history, hits)
@@ -335,13 +335,13 @@ Outbox и DLQ появятся, когда будет первый реальн�
 5. `router.conf` — только публичные пути; `/internal/*` не маршрутизируются.
 6. `docs/services/<имя>.md` и строка в `README.md`.
 
-### Новая аудитория
+### Новый канал или группа
 
-1. Словарь аудиторий (пока — константы в `auth`, затем `contracts/vocab/`).
-2. Миграция с расширением `CHECK`.
-3. `scopes()` в `auth` и фильтр в запросе к Elasticsearch.
-4. Тест: токен с новой аудиторией видит документы этой аудитории и не видит
-   чужие.
+1. Словарь каналов (`public`, `internal`) и групп — в `auth`.
+2. Миграция с расширением `CHECK` в `access_grants`.
+3. Новая роль или группа в `scopes()`/`grp` в `auth`, каналы в `Claims.Channels()`
+   и фильтр в запросе к Elasticsearch.
+4. Тест: токен с новой группой видит документы этой группы и не видит чужие.
 
 ## Автоматические проверки
 
