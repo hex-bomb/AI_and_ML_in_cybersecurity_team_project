@@ -46,6 +46,14 @@ class AppError(Exception):
         return AppError(400, "INVALID_REQUEST", message)
 
     @staticmethod
+    def not_found(code: str, message: str) -> "AppError":
+        return AppError(404, code, message)
+
+    @staticmethod
+    def conflict(code: str, message: str) -> "AppError":
+        return AppError(409, code, message)
+
+    @staticmethod
     def too_large() -> "AppError":
         return AppError(413, "PAYLOAD_TOO_LARGE", "Файл больше лимита")
 

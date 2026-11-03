@@ -3,26 +3,35 @@
 import asyncio
 
 import pytest
+from app.db import ConversationNotFound, IdempotencyConflict, TurnInProgress
 from app.errors import AppError, BadRequest, Unavailable
 from app.rag import NO_EVIDENCE
 from app.usecases.ask import AskQuestion, Question
 from app.usecases.ask_file import AskAboutFile, FileQuestion
-from fakes import FakeCompleter, FakeEmbedder, FakeExtractor, FakeRetriever, hit
+from fakes import FakeCompleter, FakeDialogs, FakeEmbedder, FakeExtractor, FakeRetriever, hit
 
 # Метка сессии для вызовов соседей: в тестах авторизация не проверяется.
 SESSION = "test-session"
 
 
 def question(text: str = "какая гарантия на станки") -> Question:
-    return Question(text=text, history=(), token=SESSION)
+    return Question(text=text, token=SESSION, subject="user-1", client_message_id="msg-1")
 
 
 def file_ask(text: str = "что в файле") -> FileQuestion:
     return FileQuestion(filename="report.pdf", content=b"%PDF", question=text)
 
 
-def ask_question(retriever=None, completer=None) -> AskQuestion:
-    return AskQuestion(retriever or FakeRetriever([hit()]), completer or FakeCompleter())
+def ask_question(
+    retriever=None,
+    completer=None,
+    dialogs=None,
+) -> AskQuestion:
+    return AskQuestion(
+        retriever or FakeRetriever([hit()]),
+        completer or FakeCompleter(),
+        dialogs or FakeDialogs(),
+    )
 
 
 def ask_file(extractor=None, embedder=None, completer=None) -> AskAboutFile:
@@ -61,13 +70,66 @@ def test_answer_has_citations_from_hits() -> None:
     assert result["citations"][0]["chunk_id"] == "chunk-1"
 
 
-def test_retrieval_failure_is_503() -> None:
-    ask = ask_question(retriever=FakeRetriever(error=Unavailable("down")))
+def test_answer_is_written_with_conversation_and_turn() -> None:
+    dialogs = FakeDialogs()
+
+    result = asyncio.run(ask_question(dialogs=dialogs)(question()))
+
+    assert result["conversation_id"] == str(dialogs.conversation_id)
+    assert result["turn_id"] == str(dialogs.turn_id)
+    assert len(dialogs.finished) == 1
+    stored = dialogs.finished[0]
+    assert stored["payload"]["answer"] == "ответ"
+    assert stored["client_message_id"] == "msg-1"
+
+
+def test_citations_are_stored_by_internal_document_ref() -> None:
+    dialogs = FakeDialogs()
+    doc = "6a1c1f3a-2f5a-4b4a-9a8e-0d4b1f0f4b7c"
+    ver = "0f1d2c3b-4a59-4687-8b9a-1c2d3e4f5061"
+    hit_doc = {**hit(), "document_ref": doc, "version_id": ver}
+
+    asyncio.run(ask_question(retriever=FakeRetriever([hit_doc]), dialogs=dialogs)(question()))
+
+    rows = dialogs.finished[0]["citations"]
+    assert rows[0]["document_id"].hex == doc.replace("-", "")
+    assert rows[0]["ordinal"] == 1
+
+
+def test_citation_without_internal_ref_is_skipped() -> None:
+    dialogs = FakeDialogs()
+
+    asyncio.run(ask_question(dialogs=dialogs)(question()))
+
+    assert dialogs.finished[0]["citations"] == [], "внешний ключ не станет ссылкой в БД"
+
+
+def test_replay_skips_model_call() -> None:
+    retriever = FakeRetriever([hit()])
+    completer = FakeCompleter()
+    replay = {"status": "ok", "answer": "сохранённый", "citations": []}
+
+    result = asyncio.run(
+        ask_question(retriever=retriever, completer=completer, dialogs=FakeDialogs(replay=replay))(
+            question()
+        )
+    )
+
+    assert result == replay
+    assert retriever.calls == 0
+    assert completer.prompts == []
+
+
+def test_retrieval_failure_is_503_and_turn_fails() -> None:
+    dialogs = FakeDialogs()
+    ask = ask_question(retriever=FakeRetriever(error=Unavailable("down")), dialogs=dialogs)
 
     with pytest.raises(AppError) as error:
         asyncio.run(ask(question()))
 
     assert (error.value.status, error.value.code) == (503, "SEARCH_UNAVAILABLE")
+    assert dialogs.failed == [(dialogs.turn_id, "SEARCH_UNAVAILABLE")]
+    assert dialogs.finished == []
 
 
 def test_llm_failure_is_503() -> None:
@@ -90,17 +152,40 @@ def test_empty_model_output_is_502() -> None:
 
 def test_history_is_passed_to_prompt() -> None:
     completer = FakeCompleter()
-    ask = ask_question(completer=completer)
-    asked = Question(
-        text="а точнее?",
-        history=("user: какая гарантия", "assistant: два года"),
-        token=SESSION,
-    )
+    dialogs = FakeDialogs(history=("user: какая гарантия", "assistant: два года"))
+    ask = ask_question(completer=completer, dialogs=dialogs)
 
-    asyncio.run(ask(asked))
+    asyncio.run(ask(question("а точнее?")))
 
     assert "user: какая гарантия" in completer.prompts[0]
     assert "assistant: два года" in completer.prompts[0]
+
+
+def test_foreign_conversation_is_404() -> None:
+    ask = ask_question(dialogs=FakeDialogs(error=ConversationNotFound("x")))
+
+    with pytest.raises(AppError) as error:
+        asyncio.run(ask(question()))
+
+    assert (error.value.status, error.value.code) == (404, "CONVERSATION_NOT_FOUND")
+
+
+def test_second_turn_in_flight_is_409() -> None:
+    ask = ask_question(dialogs=FakeDialogs(error=TurnInProgress("x")))
+
+    with pytest.raises(AppError) as error:
+        asyncio.run(ask(question()))
+
+    assert (error.value.status, error.value.code) == (409, "TURN_IN_PROGRESS")
+
+
+def test_reused_message_key_with_other_text_is_409() -> None:
+    ask = ask_question(dialogs=FakeDialogs(error=IdempotencyConflict("x")))
+
+    with pytest.raises(AppError) as error:
+        asyncio.run(ask(question()))
+
+    assert (error.value.status, error.value.code) == (409, "IDEMPOTENCY_CONFLICT")
 
 
 def test_file_uses_file_citations() -> None:

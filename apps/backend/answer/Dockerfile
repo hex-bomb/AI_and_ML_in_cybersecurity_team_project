@@ -4,6 +4,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir .
 COPY app ./app
+COPY migrations ./migrations
 RUN useradd -r -u 10001 app
 USER 10001
 EXPOSE 8000

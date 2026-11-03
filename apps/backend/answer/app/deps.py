@@ -6,8 +6,9 @@ import jwt
 from fastapi import Depends, Request
 
 from app.clients import Clients
+from app.db import Dialogs
 from app.errors import AppError
-from app.settings import TOP_K
+from app.settings import DATABASE_URL, TOP_K
 from app.usecases.ask import AskQuestion
 from app.usecases.ask_file import AskAboutFile
 
@@ -21,10 +22,19 @@ class Auth:
 
 
 _clients = Clients()
+_dialogs: Dialogs | None = None
 
 
 def get_clients() -> Clients:
     return _clients
+
+
+def get_dialogs() -> Dialogs:
+    """Пул создаётся лениво: импорт модуля не должен ходить в сеть."""
+    global _dialogs
+    if _dialogs is None:
+        _dialogs = Dialogs(DATABASE_URL)
+    return _dialogs
 
 
 def token_of(request: Request) -> str | None:
@@ -51,8 +61,11 @@ async def authenticated(request: Request, clients: Clients = Depends(get_clients
     return Auth(claims=claims, token=token or "")
 
 
-def ask_question(clients: Clients = Depends(get_clients)) -> AskQuestion:
-    return AskQuestion(clients, clients, TOP_K)
+def ask_question(
+    clients: Clients = Depends(get_clients),
+    dialogs: Dialogs = Depends(get_dialogs),
+) -> AskQuestion:
+    return AskQuestion(clients, clients, dialogs, TOP_K)
 
 
 def ask_about_file(clients: Clients = Depends(get_clients)) -> AskAboutFile:

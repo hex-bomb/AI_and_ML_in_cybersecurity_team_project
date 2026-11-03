@@ -162,6 +162,7 @@ services:
   answer:
     build: apps/backend/answer
     environment:
+      ANSWER_DATABASE_URL: postgresql://vektor:${POSTGRES_PASSWORD:-vektor-dev}@postgres:5432/vektor_answer
       RETRIEVAL_URL: http://retrieval:8080
       EMBEDDING_URL: http://embedding:8000
       DOCUMENTS_URL: http://documents:8080
@@ -174,6 +175,9 @@ services:
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-}
     ports:
       - "127.0.0.1:8083:8000"   # FastAPI /docs
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)\""]
       interval: 10s
