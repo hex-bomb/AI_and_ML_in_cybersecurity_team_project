@@ -6,6 +6,7 @@ import httpx
 import jwt
 from jwt import PyJWKClient
 
+from app.errors import BadRequest, Unavailable
 from app.gigachat import (
     BASE_URL as GIGACHAT_BASE_URL,
 )
@@ -24,14 +25,6 @@ from app.gigachat import (
 
 def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
-
-
-class Unavailable(Exception):
-    """Зависимость недоступна: наружу уходит 503."""
-
-
-class BadRequest(Exception):
-    """Некорректный вход на стороне зависимости: наружу 400."""
 
 
 class Clients:
