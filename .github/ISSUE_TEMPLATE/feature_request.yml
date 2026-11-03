@@ -1,0 +1,41 @@
+name: Задача
+description: Новая возможность или изменение поведения
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Компонент
+      options:
+        - answer
+        - auth
+        - documents
+        - embedding
+        - ingest
+        - retrieval
+        - widget
+        - web-app
+        - infra
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Задача
+      description: Что сейчас мешает и кому. Без предложенного решения, если оно не очевидно.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предложение
+      description: Как это можно сделать и какие контракты затронуты.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Альтернативы
+      description: Что ещё рассматривали и почему отказались.
