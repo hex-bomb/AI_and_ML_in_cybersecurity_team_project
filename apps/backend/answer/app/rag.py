@@ -6,7 +6,6 @@ from typing import Any
 
 NO_EVIDENCE = "В доступной базе знаний не найдено подтверждающих материалов."
 
-# Размер окна при нарезке загруженного файла.
 SLICE_CHARS = 1000
 
 SYSTEM = """Ты — ассистент компании ВЕКТОР.
@@ -145,7 +144,6 @@ def slices(text: str, slice_chars: int = SLICE_CHARS) -> list[str]:
         paragraph = paragraph.strip()
         if not paragraph:
             continue
-        # Слишком длинный абзац режем на куски, сохраняя весь текст.
         while len(paragraph) > slice_chars:
             if current:
                 out.append(current)
@@ -164,7 +162,7 @@ def slices(text: str, slice_chars: int = SLICE_CHARS) -> list[str]:
 
 
 def cosine(left: list[float], right: list[float]) -> float:
-    """Скалярное произведение — векторы нормализованы сервисом embedding."""
+    """Косинус через скалярное произведение: embedding отдаёт векторы единичной длины."""
     return sum(a * b for a, b in zip(left, right, strict=True))
 
 

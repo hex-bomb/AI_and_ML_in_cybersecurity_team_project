@@ -11,11 +11,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Ограничитель попыток входа: скользящее окно на ключ (логин + IP).
- * Состояние in-memory и теряется при рестарте — для стенда приемлемо.
+ * Ограничитель попыток входа: счётчик на ключ (логин + IP) в окне {@code windowSeconds}.
+ * Окно не скользит: счётчик обнуляется, когда с момента открытия окна прошло
+ * {@code windowSeconds}. Состояние in-memory и теряется при рестарте — для стенда приемлемо.
  *
  * <p>Вход неаутентифицирован, поэтому карта ключей ограничена: иначе перебор
- * логинов превращает троттлинг в утечку памяти вплоть до OOM.
+ * логинов превращает троттлинг в утечку памяти вплоть до OOM. Потокобезопасен:
+ * состояние в {@link ConcurrentHashMap}, счётчики атомарные.
  */
 @Component
 public class LoginThrottle {
@@ -27,7 +29,7 @@ public class LoginThrottle {
     /** Предел числа окон: защита от роста карты при переборе уникальных логинов. */
     static final int MAX_KEYS = 10_000;
 
-    /** Как часто убирать просроченные окна, чтобы они не копились между всплесками. */
+    /** Полный проход по карте раз в столько вызовов: на каждом входе это слишком дорого. */
     private static final long SWEEP_EVERY = 1024;
 
     record Attempt(long windowStart, AtomicInteger count) {}
@@ -53,7 +55,11 @@ public class LoginThrottle {
         this.clock = clock;
     }
 
-    /** true — попытка разрешена, false — превышен лимит. */
+    /**
+     * true — попытка разрешена, false — лимит окна исчерпан. Счётчик не меняет:
+     * неудачу нужно отметить через {@link #recordFailure(String)}. Раз в
+     * {@code SWEEP_EVERY} вызовов попутно чистит просроченные окна.
+     */
     public boolean allowed(String key) {
         if (calls.incrementAndGet() % SWEEP_EVERY == 0) {
             prune();
@@ -94,13 +100,12 @@ public class LoginThrottle {
         });
     }
 
-    /** Устаревшие окна не должны копиться бесконечно. */
     void prune() {
         long cutoff = clock.instant().getEpochSecond() - windowSeconds;
         attempts.values().removeIf(a -> a.windowStart() < cutoff);
     }
 
-    /** Текущее число окон — для диагностики и тестов. */
+    /** Число окон в карте — для тестов и диагностики. */
     int size() {
         return attempts.size();
     }

@@ -9,7 +9,7 @@ from app.usecases.ask import AskQuestion, Question
 from app.usecases.ask_file import AskAboutFile, FileQuestion
 from fakes import FakeCompleter, FakeEmbedder, FakeExtractor, FakeRetriever, hit
 
-# Идентификатор сессии для вызовов соседей: в тестах это просто метка.
+# Метка сессии для вызовов соседей: в тестах авторизация не проверяется.
 SESSION = "test-session"
 
 

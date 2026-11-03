@@ -18,6 +18,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * Проверяет JWT по JWKS auth-сервиса.
+ *
+ * <p>Ключи кешируются на {@code ttl} и обновляются под блокировкой, так что
+ * одновременные запросы не устраивают шторм к auth. При сбое обновления
+ * отдаём ключ из старого кеша, а между неудачными попытками держим паузу
+ * {@code RETRY_BACKOFF}. Экземпляр потокобезопасен.
+ */
 @Component
 public class TokenVerifier {
 
@@ -26,8 +34,8 @@ public class TokenVerifier {
     );
 
     private static final Duration TTL = Duration.ofMinutes(5);
-    // Пауза после неудачного обновления: недоступный auth не должен
-    // превращаться в блокировку каждого запроса на 5 секунд.
+    // Пауза после неудачного обновления: иначе недоступный auth заставляет
+    // каждый запрос ждать таймаут fetch().
     private static final Duration RETRY_BACKOFF = Duration.ofSeconds(10);
 
     public record Claims(
@@ -91,6 +99,11 @@ public class TokenVerifier {
         this.backoff = backoff;
     }
 
+    /**
+     * Проверяет подпись, срок и issuer и достаёт из токена scopes, tenant и kb.
+     *
+     * @throws Errors.AppError если токен пустой, битый, просрочен или чужой
+     */
     public Claims verify(String token) {
         if (token == null || token.isBlank()) {
             throw Errors.forbidden();

@@ -43,7 +43,8 @@ public class ObsFilter implements Filter {
             var status = String.valueOf(
                 ((HttpServletResponse) response).getStatus()
             );
-            // Шаблон маршрута, а не сырой URI: кардинальность метрик ограничена.
+            // В тег path идёт шаблон маршрута, а не сырой URI: иначе число
+            // таймсерий растёт вместе с разнообразием URL.
             var pattern = http.getAttribute(
                 HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE
             );

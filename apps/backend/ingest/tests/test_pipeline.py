@@ -63,8 +63,6 @@ def test_split_keeps_text_shorter_than_window() -> None:
 
 
 def test_split_hard_cuts_sentence_longer_than_window() -> None:
-    # Предложение без знаков препинания (таблица, лог) раньше уходило одним
-    # окном длиннее лимита: токенизатор обрезал хвост, и он не индексировался.
     text = "а" * 2500
     chunks = split(text, 1000, 200)
 

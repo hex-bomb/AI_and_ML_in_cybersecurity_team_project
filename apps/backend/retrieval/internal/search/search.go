@@ -5,7 +5,7 @@ package search
 import "sort"
 
 const (
-	// rrfK — постоянная сглаживания RRF: 60 зарекомендовано оригинальными авторами.
+	// rrfK — постоянная сглаживания RRF; 60 — значение из оригинальной статьи.
 	rrfK = 60
 	// candidates — минимум кандидатов для knn, чтобы recall не падал на коротких запросах.
 	candidates = 100
@@ -38,12 +38,14 @@ type Scope struct {
 	Audiences []string
 }
 
-// Size — сколько кандидатов запрашивать у каждой системы поиска.
+// Size — сколько кандидатов просить у каждой ветки: с запасом на слияние
+// и не меньше 10.
 func Size(topK int) int {
 	return max(topK*3, 10)
 }
 
-// scopeFilter — общий фильтр по kb и аудиториям для lexical и knn.
+// scopeFilter — один фильтр на обе ветки: иначе лексика и kNN видят разные
+// документы.
 func scopeFilter(s Scope) []any {
 	return []any{
 		map[string]any{"term": map[string]any{"kb_id": s.KB}},
@@ -51,7 +53,8 @@ func scopeFilter(s Scope) []any {
 	}
 }
 
-// LexicalBody — тело запроса BM25 по заголовку и тексту.
+// LexicalBody — тело BM25-запроса по заголовку и тексту. title^3 поднимает
+// заголовок над текстом; embedding из _source не тянем — наружу он не нужен.
 func LexicalBody(s Scope, query string, size int) map[string]any {
 	return map[string]any{
 		"size":    size,
@@ -67,7 +70,8 @@ func LexicalBody(s Scope, query string, size int) map[string]any {
 	}
 }
 
-// KnnBody — тело запроса kNN по вектору.
+// KnnBody — тело kNN-запроса по вектору. num_candidates задаёт глубину обхода
+// HNSW: больше кандидатов — выше recall и дороже запрос.
 func KnnBody(s Scope, vector []float64, size int) map[string]any {
 	return map[string]any{
 		"size":    size,
@@ -88,8 +92,8 @@ type Fused struct {
 	Score float64
 }
 
-// RRF объединяет несколько ранжировок reciprocal rank fusion.
-// tie-break — по порядку первого появления, чтобы выдача была стабильной.
+// RRF сливает ранжировки по формуле reciprocal rank fusion: вклад документа —
+// 1/(rrfK+rank). tie-break — по порядку первого появления, чтобы выдача была стабильной.
 func RRF(rankings [][]string, limit int) []Fused {
 	scores := map[string]float64{}
 	firstSeen := map[string]int{}
@@ -119,7 +123,8 @@ func RRF(rankings [][]string, limit int) []Fused {
 	return out
 }
 
-// ToHit отображает документ Elasticsearch в наружный Hit.
+// ToHit отображает документ Elasticsearch в наружный Hit. BlockIDs остаётся
+// пустым: в _source нет block_ids, но в JSON нужно [], а не null.
 func ToHit(src map[string]any, score float64) Hit {
 	documentID := str(src["document_id"])
 	return Hit{
@@ -180,6 +185,7 @@ func stringsOf(v any) []string {
 	return out
 }
 
+// intPtr переводит число из _source: encoding/json отдаёт числа как float64.
 func intPtr(v any) *int {
 	f, ok := v.(float64)
 	if !ok {

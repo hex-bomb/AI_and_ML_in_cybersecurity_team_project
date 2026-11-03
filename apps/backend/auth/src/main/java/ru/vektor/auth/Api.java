@@ -92,7 +92,7 @@ public class Api {
         }
         throttle.reset(throttleKey);
 
-        // Сервисный аккаунт администратора
+        // admin — сервисный аккаунт: получает adminTtl, то есть почти бессрочный токен.
         var effectiveTtl = "admin".equals(user.role()) ? adminTtl : ttl;
 
         String token;
@@ -184,7 +184,8 @@ public class Api {
         return tokens.jwks();
     }
 
-    // Единственное место, где роль превращается в набор аудиторий
+    // Единственное место, где роль превращается в аудитории: остальные сервисы
+    // доверяют только scopes из токена, а не полю role.
     static List<String> scopes(String role) {
         return switch (role) {
             case "admin" -> List.of("public", "employee");

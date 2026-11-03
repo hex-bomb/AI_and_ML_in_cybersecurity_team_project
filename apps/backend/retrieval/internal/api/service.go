@@ -34,13 +34,14 @@ func (s *HybridSearch) Search(ctx context.Context, scope search.Scope, query str
 		result search.SearchResult
 		err    error
 	}
+	// Буфер на 1: горутина не залипнет, даже если читатель уйдёт раньше.
 	lexCh := make(chan lexResult, 1)
 	go func() {
 		result, err := s.es.Search(ctx, search.LexicalBody(scope, query, size))
 		lexCh <- lexResult{result, err}
 	}()
 
-	// Вектор недоступен — работаем на лексике, это не ошибка.
+	// Отказ embedding не фатален: запрос продолжит лексическая ветка.
 	vector, embedErr := s.embedder.Embed(ctx, query)
 	s.noteEmbedding(embedErr)
 
@@ -57,7 +58,6 @@ func (s *HybridSearch) Search(ctx context.Context, scope search.Scope, query str
 	}
 
 	lex := <-lexCh
-	// Ошибка — только если недоступны обе ветки поиска.
 	if lex.err != nil && vecErr != nil {
 		return nil, combineErrors(lex.err, vecErr)
 	}
@@ -107,6 +107,7 @@ func (e *searchUnavailableError) Error() string {
 	return "both lexical and knn search failed"
 }
 
+// Unwrap отдаёт обе причины: errors.Is/As должны находить любую из веток.
 func (e *searchUnavailableError) Unwrap() []error {
 	return []error{e.lex, e.vec}
 }

@@ -42,6 +42,7 @@ func main() {
 		TLSHandshakeTimeout:   3 * time.Second,
 		ExpectContinueTimeout: time.Second,
 	}
+	// Timeout клиента — верхняя страховка на вызов; рабочий дедлайн поиска задаёт handler.
 	httpClient := &http.Client{Transport: transport, Timeout: 20 * time.Second}
 
 	es := search.NewES(esURL, esIndex, httpClient)
@@ -72,6 +73,7 @@ func main() {
 	}()
 	<-ctx.Done()
 
+	// До 10s на завершение активных запросов, дальше соединения рвутся.
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(shutdown)

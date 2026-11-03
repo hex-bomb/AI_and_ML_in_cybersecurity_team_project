@@ -8,7 +8,7 @@
   OpenAI-совместимым JSON (``choices[0].message.content``);
 - заголовок User-Agent рекомендован спецификацией.
 
-Живой проверено 2026-10-31: обмен ключа и запрос к GigaChat-2 отвечают 200.
+На живом стенде обмен ключа и запрос к GigaChat-2 отвечают 200.
 """
 
 import time
@@ -85,7 +85,7 @@ class GigaChatAuth:
     def _parse_expiry(value: object) -> int:
         # Спека: unix timestamp в миллисекундах; страхуемся от секунд.
         try:
-            raw = int(value)  # type: ignore[arg-type]
+            raw = int(value)  # type: ignore[arg-type]  # expires_at бывает числом или строкой
         except (TypeError, ValueError):
             return int(time.time() * 1000) + 25 * 60 * 1000
         if raw < 10**12:

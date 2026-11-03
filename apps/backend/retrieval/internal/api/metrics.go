@@ -30,6 +30,8 @@ func NewMetrics() *Metrics {
 	}
 }
 
+// statusRecorder запоминает код ответа: из http.ResponseWriter после записи
+// его уже не прочитать.
 type statusRecorder struct {
 	http.ResponseWriter
 	status int
@@ -69,6 +71,7 @@ func (m *Metrics) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for k := range m.counts {
 		keys = append(keys, k)
 	}
+	// Фиксированный порядок: иначе выдача /metrics меняется от скрейпа к скрейпу.
 	sort.Slice(keys, func(i, j int) bool {
 		if keys[i].path != keys[j].path {
 			return keys[i].path < keys[j].path

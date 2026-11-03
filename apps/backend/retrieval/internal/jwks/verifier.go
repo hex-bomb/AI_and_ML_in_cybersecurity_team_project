@@ -51,12 +51,16 @@ type Verifier struct {
 	refreshMu sync.Mutex
 	// nextAttempt — пауза после неудачного обновления; читается только под refreshMu.
 	nextAttempt time.Time
-	ttl         time.Duration
+	// ttl задаёт время жизни кэша: ротация ключей в auth подхватывается с этой
+	// задержкой.
+	ttl time.Duration
 }
 
 const (
 	refreshBackoff = 10 * time.Second
-	maxJwksBytes   = 1 << 20
+	// maxJwksBytes ограничивает тело ответа JWKS: auth — внешняя система, её
+	// ответ читаем с потолком.
+	maxJwksBytes = 1 << 20
 )
 
 func NewVerifier(url string) *Verifier {
@@ -182,6 +186,8 @@ func (v *Verifier) hasAny() bool {
 	return len(v.keys) > 0
 }
 
+// refresh заменяет карту ключей разом: подписчики cached не увидят полусобранный
+// набор.
 func (v *Verifier) refresh(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.url, nil)
 	if err != nil {
