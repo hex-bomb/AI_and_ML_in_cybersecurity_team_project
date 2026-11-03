@@ -6,6 +6,7 @@ import httpx
 import jwt
 from jwt import PyJWKClient
 
+from app.errors import BadRequest, Unavailable
 from app.gigachat import (
     BASE_URL as GIGACHAT_BASE_URL,
 )
