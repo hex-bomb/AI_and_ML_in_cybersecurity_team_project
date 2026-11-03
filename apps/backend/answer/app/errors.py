@@ -35,10 +35,6 @@ class AppError(Exception):
         return AppError(503, "AUTH_UNAVAILABLE", "Сервис авторизации недоступен")
 
     @staticmethod
-    def kb_not_found() -> "AppError":
-        return AppError(404, "KB_NOT_FOUND", "Неизвестная база знаний")
-
-    @staticmethod
     def forbidden(
         message: str = "Доступ запрещён",
         details: dict[str, Any] | None = None,

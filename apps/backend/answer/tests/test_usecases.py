@@ -14,7 +14,7 @@ SESSION = "test-session"
 
 
 def question(text: str = "какая гарантия на станки") -> Question:
-    return Question(kb_id="kb", text=text, history=(), token=SESSION)
+    return Question(text=text, history=(), token=SESSION)
 
 
 def file_ask(text: str = "что в файле") -> FileQuestion:
@@ -92,7 +92,6 @@ def test_history_is_passed_to_prompt() -> None:
     completer = FakeCompleter()
     ask = ask_question(completer=completer)
     asked = Question(
-        kb_id="kb",
         text="а точнее?",
         history=("user: какая гарантия", "assistant: два года"),
         token=SESSION,

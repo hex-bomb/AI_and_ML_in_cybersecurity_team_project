@@ -2,9 +2,7 @@ from typing import Any, Protocol
 
 
 class Retriever(Protocol):
-    async def search(
-        self, kb_id: str, query: str, top_k: int, token: str
-    ) -> list[dict[str, Any]]: ...
+    async def search(self, query: str, top_k: int, token: str) -> list[dict[str, Any]]: ...
 
 
 class Completer(Protocol):

@@ -27,7 +27,7 @@ class FakeRetriever:
         self.error = error
         self.calls = 0
 
-    async def search(self, kb_id: str, query: str, top_k: int, token: str):
+    async def search(self, query: str, top_k: int, token: str):
         self.calls += 1
         if self.error:
             raise self.error

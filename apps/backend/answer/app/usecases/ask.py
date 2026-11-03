@@ -12,7 +12,6 @@ from app.usecases.common import answer_from_hits
 class Question:
     """Вход сценария: вопрос, история диалога и сессия для вызовов соседей."""
 
-    kb_id: str
     text: str
     history: tuple[str, ...]
     token: str
@@ -41,9 +40,7 @@ class AskQuestion:
             raise AppError.forbidden("Запрос отклонён политикой безопасности", {"reason": reason})
 
         try:
-            hits = await self._retriever.search(
-                question.kb_id, question.text, self._top_k, question.token
-            )
+            hits = await self._retriever.search(question.text, self._top_k, question.token)
         except Unavailable as exc:
             raise AppError.search_unavailable() from exc
 

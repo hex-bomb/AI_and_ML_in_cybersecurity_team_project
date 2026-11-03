@@ -33,32 +33,18 @@ def clean_overrides():
 
 
 def auth(claims=None, session="session") -> Auth:
-    return Auth(claims=claims or {"kb": "kb", "scp": ["public"]}, token=session)
+    return Auth(claims=claims or {"scp": ["public"]}, token=session)
 
 
 def test_missing_token_is_401_with_envelope() -> None:
     app.dependency_overrides[get_clients] = RejectingClient
 
-    response = TestClient(app).post("/api/v1/answers", json={"kb_id": "kb", "question": "вопрос"})
+    response = TestClient(app).post("/api/v1/answers", json={"question": "вопрос"})
     body = response.json()
 
     assert response.status_code == 401
     assert body["error"]["code"] == "UNAUTHORIZED"
     assert body["request_id"]
-
-
-def test_foreign_kb_is_404_before_usecase() -> None:
-    stub = StubAsk()
-    app.dependency_overrides[authenticated] = lambda: auth({"kb": "mine", "scp": ["public"]})
-    app.dependency_overrides[ask_question] = lambda: stub
-
-    response = TestClient(app).post(
-        "/api/v1/answers", json={"kb_id": "other", "question": "вопрос"}
-    )
-
-    assert response.status_code == 404
-    assert response.json()["error"]["code"] == "KB_NOT_FOUND"
-    assert stub.calls == 0
 
 
 def test_answer_adds_request_id_and_status() -> None:
@@ -69,7 +55,7 @@ def test_answer_adds_request_id_and_status() -> None:
 
     response = TestClient(app).post(
         "/api/v1/answers",
-        json={"kb_id": "kb", "question": "вопрос"},
+        json={"question": "вопрос"},
         headers={"X-Request-ID": "rid-1"},
     )
     body = response.json()

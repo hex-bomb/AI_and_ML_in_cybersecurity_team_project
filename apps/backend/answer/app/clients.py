@@ -88,10 +88,10 @@ class Clients:
         key = await asyncio.to_thread(self._jwks.get_signing_key_from_jwt, token)
         return jwt.decode(token, key.key, algorithms=["RS256"], options={"require": ["exp"]})
 
-    async def search(self, kb_id: str, query: str, top_k: int, token: str) -> list[dict[str, Any]]:
+    async def search(self, query: str, top_k: int, token: str) -> list[dict[str, Any]]:
         response = await self._http.post(
             f"{self.retrieval_url}/api/v1/search",
-            json={"kb_id": kb_id, "query": query, "top_k": top_k},
+            json={"query": query, "top_k": top_k},
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:

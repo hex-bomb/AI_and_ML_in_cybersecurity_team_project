@@ -38,7 +38,6 @@ class Turn(BaseModel):
 
 
 class AnswerRequest(BaseModel):
-    kb_id: str = Field(min_length=1, max_length=64)
     question: str = Field(min_length=1, max_length=4000)
     history: list[Turn] = Field(default_factory=list, max_length=20)
 
@@ -98,14 +97,11 @@ async def answers(
     auth: Auth = Depends(authenticated),
     ask: AskQuestion = Depends(ask_question),
 ) -> JSONResponse:
-    if payload.kb_id != auth.claims.get("kb"):
-        raise AppError.kb_not_found()
     if not auth.claims.get("scp"):
         raise AppError.forbidden()
 
     result = await ask(
         Question(
-            kb_id=payload.kb_id,
             text=payload.question.strip(),
             history=tuple(
                 f"{turn.role}: {' '.join(turn.text.split())}"
