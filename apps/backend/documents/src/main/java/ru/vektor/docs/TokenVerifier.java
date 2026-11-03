@@ -42,8 +42,7 @@ public class TokenVerifier {
         String sub,
         String role,
         List<String> scopes,
-        String tenant,
-        String kb
+        List<String> groups
     ) {
         /**
          * Право на внутренние документы определяется аудиторией из токена,
@@ -54,8 +53,11 @@ public class TokenVerifier {
             return scopes.contains("employee");
         }
 
-        public boolean canRead(String audience) {
-            return scopes.contains(audience);
+        /** Сотрудник видит оба канала, посетитель — только публичный. */
+        public List<String> channels() {
+            return employee()
+                ? List.of("public", "internal")
+                : List.of("public");
         }
     }
 
@@ -125,9 +127,8 @@ public class TokenVerifier {
             return new Claims(
                 claims.getSubject(),
                 text(claims, "role"),
-                scopes(claims),
-                text(claims, "tenant"),
-                text(claims, "kb")
+                strings(claims, "scp"),
+                strings(claims, "grp")
             );
         } catch (Errors.AppError error) {
             throw error;
@@ -210,8 +211,8 @@ public class TokenVerifier {
         return value == null ? "" : value.toString();
     }
 
-    private static List<String> scopes(JWTClaimsSet claims) {
-        var value = claims.getClaim("scp");
+    private static List<String> strings(JWTClaimsSet claims, String name) {
+        var value = claims.getClaim(name);
         if (value instanceof List<?> list) {
             return list.stream().map(String::valueOf).toList();
         }

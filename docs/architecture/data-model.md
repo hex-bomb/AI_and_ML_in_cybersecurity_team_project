@@ -36,6 +36,11 @@ lifecycle     documents.lifecycle            active → deleting → deleted
 
 ## Инварианты и где они держатся
 
+Оригинал и извлечённый текст лежат в блоб-хранилище: в БД только метаданные и
+`storage_key`. У версии две ссылки — `blob_id` (оригинал) и `text_blob_id`
+(текст), поэтому источник отдаётся без повторного разбора, а резервная копия
+состоит из базы и тома с блобами.
+
 Сервис может упасть в любой момент, поэтому часть правил вынесена в схему.
 
 | Инвариант                                                                                    | Где проверяется                       |
@@ -62,9 +67,13 @@ lifecycle     documents.lifecycle            active → deleting → deleted
 | Событие                    | Публикует   | Обрабатывает |
 | -------------------------- | ----------- | ------------ |
 | `document.version.created` | `documents` | `ingest`     |
-| `document.index.ready`     | `ingest`    | `documents`  |
 | `document.published`       | `documents` | `ingest`     |
-| `document.deleted`         | `documents` | `ingest`     |
+| `document.access.changed`  | `documents` | `ingest`     |
+| `document.withdrawn`       | `documents` | `ingest`     |
+
+Готовность индекса приходит внутренним вызовом
+`POST /internal/versions/{id}/index`, а не событием: `documents` сравнивает
+номер генерации до того, как поставить версии `ready`.
 
 События ключуются по `document_id`: порядок изменений одного документа
 сохраняется внутри партиции.

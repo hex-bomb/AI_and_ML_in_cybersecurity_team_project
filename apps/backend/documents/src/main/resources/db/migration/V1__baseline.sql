@@ -31,6 +31,7 @@ CREATE TABLE document_versions (
     id               uuid        PRIMARY KEY,
     document_id      uuid        NOT NULL REFERENCES documents (id) ON DELETE CASCADE,
     blob_id          uuid        NOT NULL REFERENCES blobs (id),
+    text_blob_id     uuid        NOT NULL REFERENCES blobs (id),
     content_sha256   char(64)    NOT NULL,
     version_label    varchar(50) NOT NULL,
     processing       varchar(20) NOT NULL DEFAULT 'pending',
@@ -53,20 +54,16 @@ CREATE INDEX idx_versions_document ON document_versions (document_id, created_at
 CREATE INDEX idx_documents_publication ON documents (publication, created_at DESC);
 
 CREATE TABLE extraction_runs (
-    id              uuid         PRIMARY KEY,
-    version_id      uuid         NOT NULL REFERENCES document_versions (id) ON DELETE CASCADE,
-    parser          varchar(50)  NOT NULL,
-    parser_version  varchar(50)  NOT NULL,
-    chunker_version varchar(50)  NOT NULL,
-    embedding_model varchar(100) NOT NULL,
-    embedding_dim   integer      NOT NULL,
-    text_chars      integer      NOT NULL,
-    quality         varchar(20)  NOT NULL,
-    warnings        jsonb        NOT NULL DEFAULT '[]'::jsonb,
-    created_at      timestamptz  NOT NULL DEFAULT now(),
+    id             uuid        PRIMARY KEY,
+    version_id     uuid        NOT NULL REFERENCES document_versions (id) ON DELETE CASCADE,
+    parser         varchar(50) NOT NULL,
+    parser_version varchar(50) NOT NULL,
+    text_chars     integer     NOT NULL,
+    quality        varchar(20) NOT NULL,
+    warnings       jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    created_at     timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT ck_extraction_quality CHECK (quality IN ('ok', 'low_text', 'empty')),
-    CONSTRAINT ck_extraction_chars CHECK (text_chars >= 0),
-    CONSTRAINT ck_extraction_dim CHECK (embedding_dim > 0)
+    CONSTRAINT ck_extraction_chars CHECK (text_chars >= 0)
 );
 
 CREATE INDEX idx_extraction_version ON extraction_runs (version_id, created_at DESC);
@@ -75,15 +72,18 @@ CREATE TABLE index_generations (
     id              uuid         PRIMARY KEY,
     version_id      uuid         NOT NULL REFERENCES document_versions (id) ON DELETE CASCADE,
     generation      integer      NOT NULL,
-    embedding_model varchar(100) NOT NULL,
-    embedding_dim   integer      NOT NULL,
+    embedding_model varchar(100) NULL,
+    embedding_dim   integer      NULL,
     state           varchar(20)  NOT NULL,
     chunk_count     integer      NOT NULL DEFAULT 0,
     started_at      timestamptz  NOT NULL DEFAULT now(),
     finished_at     timestamptz  NULL,
     CONSTRAINT uq_generations UNIQUE (version_id, generation),
     CONSTRAINT ck_generations_state CHECK (state IN ('building', 'ready', 'failed')),
-    CONSTRAINT ck_generations_dim CHECK (embedding_dim > 0)
+    CONSTRAINT ck_generations_dim CHECK (embedding_dim IS NULL OR embedding_dim > 0),
+    CONSTRAINT ck_generations_ready CHECK (
+        state <> 'ready' OR (embedding_model IS NOT NULL AND embedding_dim IS NOT NULL)
+    )
 );
 
 -- Одна сборка на версию: две параллельные сборки дали бы разные chunk_id.

@@ -125,6 +125,10 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
       JWKS_URL: http://auth:8080/.well-known/jwks.json
       DOCUMENTS_INTERNAL_TOKEN: ${DOCUMENTS_INTERNAL_TOKEN:-}
+      DOCUMENTS_BLOB_DIR: /data/blobs
+    volumes:
+      # Оригиналы документов: без этого тома backup базы неполный.
+      - docs-blobs:/data/blobs
     ports:
       - "127.0.0.1:18081:8080"   # /internal/* для заливки корпуса
       - "127.0.0.1:8082:8080"    # swagger-ui
@@ -239,3 +243,4 @@ volumes:
   pg-data:
   es-data:
   kafka-data:
+  docs-blobs:

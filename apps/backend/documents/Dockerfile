@@ -6,7 +6,9 @@ COPY src ./src
 RUN mvn -q -B -DskipTests package
 
 FROM eclipse-temurin:21-jre
-RUN useradd -r -u 10001 app
+RUN useradd -r -u 10001 app \
+  && mkdir -p /data/blobs \
+  && chown -R 10001:0 /data
 WORKDIR /app
 COPY --from=build /src/target/*.jar app.jar
 USER 10001

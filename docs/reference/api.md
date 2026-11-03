@@ -27,18 +27,20 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 
 ## Эндпоинты
 
-| Метод | Путь                                    | Доступ             | Сервис                  |
-| ----- | --------------------------------------- | ------------------ | ----------------------- |
-| POST  | `/api/v1/auth/login`                    | открыт             | `auth`                  |
-| POST  | `/api/v1/auth/logout`                   | открыт             | `auth`                  |
-| GET   | `/api/v1/auth/me`                       | cookie             | `auth`                  |
-| GET   | `/.well-known/jwks.json`                | открыт             | `auth`                  |
-| POST  | `/api/v1/search`                        | cookie             | `retrieval`             |
-| POST  | `/api/v1/answers`                       | cookie             | `answer`                |
-| POST  | `/api/v1/answers/file`                  | cookie             | `answer` -> `documents` |
-| GET   | `/api/v1/documents`                     | cookie + сотрудник | `documents`             |
-| POST  | `/api/v1/documents`                     | cookie + сотрудник | `documents`             |
-| GET   | `/api/v1/documents/{documentId}/source` | cookie             | `documents`             |
+| Метод | Путь                                      | Доступ             | Сервис                  |
+| ----- | ----------------------------------------- | ------------------ | ----------------------- |
+| POST  | `/api/v1/auth/login`                      | открыт             | `auth`                  |
+| POST  | `/api/v1/auth/logout`                     | открыт             | `auth`                  |
+| GET   | `/api/v1/auth/me`                         | cookie             | `auth`                  |
+| GET   | `/.well-known/jwks.json`                  | открыт             | `auth`                  |
+| POST  | `/api/v1/search`                          | cookie             | `retrieval`             |
+| POST  | `/api/v1/answers`                         | cookie             | `answer`                |
+| POST  | `/api/v1/answers/file`                    | cookie             | `answer` -> `documents` |
+| GET   | `/api/v1/documents`                       | cookie + сотрудник | `documents`             |
+| POST  | `/api/v1/documents`                       | cookie + сотрудник | `documents`             |
+| GET   | `/api/v1/documents/{documentId}/source`   | cookie             | `documents`             |
+| POST  | `/api/v1/documents/{documentId}/publish`  | cookie + сотрудник | `documents`             |
+| POST  | `/api/v1/documents/{documentId}/withdraw` | cookie + сотрудник | `documents`             |
 
 Сессия — JWT в httpOnly cookie `vektor_session` с `SameSite=Lax`. Заголовок
 `Authorization: Bearer` поддерживается для вызовов между сервисами.
@@ -51,6 +53,8 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | Метод | Путь                                           | Сервис      | Назначение                                         |
 | ----- | ---------------------------------------------- | ----------- | -------------------------------------------------- |
 | POST  | `/internal/documents`                          | `documents` | залить текст без файла (сид корпуса), идемпотентно |
+| POST  | `/internal/publish/{externalId}`               | `documents` | опубликовать готовую версию для сида               |
+| POST  | `/internal/versions/{versionId}/index`         | `documents` | отчёт индексатора о готовности версии              |
 | GET   | `/internal/documents/{id}/versions/{vid}/text` | `documents` | текст версии для `ingest`                          |
 | POST  | `/internal/extract`                            | `documents` | разобрать файл и вернуть текст                     |
 
