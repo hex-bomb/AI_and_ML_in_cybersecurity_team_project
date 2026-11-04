@@ -183,6 +183,108 @@ class DocumentRepositoryTest {
     }
 
     @Test
+    void reindexQueuesNewGenerationForPublishedOnly() {
+        var published = store("doc-live", "Опубликованный документ", "public");
+        inTx(() -> repository.markIndexed(published.id(), 1, "e5", 1024, 1));
+        inTx(() -> repository.publish("doc-live", null));
+
+        var draft = store("doc-draft", "Черновик без публикации", "internal");
+        inTx(() -> repository.markIndexed(draft.id(), 1, "e5", 1024, 1));
+
+        assertEquals(1, inTx(() -> repository.reindexPublished()));
+
+        // Новая генерация: старый номер индексатор прислал бы как устаревший.
+        assertEquals(
+            2,
+            jdbc
+                .sql(
+                    "select index_generation from document_versions where id = :id"
+                )
+                .param("id", published.id())
+                .query(Integer.class)
+                .single()
+        );
+        assertEquals(
+            1,
+            jdbc
+                .sql(
+                    "select index_generation from document_versions where id = :id"
+                )
+                .param("id", draft.id())
+                .query(Integer.class)
+                .single()
+        );
+
+        // Ингесту нужны оба события: текст с новой генерацией и видимость.
+        var documentId = jdbc
+            .sql("select id from documents where external_id = :id")
+            .param("id", "doc-live")
+            .query(UUID.class)
+            .single();
+        var types = jdbc
+            .sql(
+                """
+                select event_type from outbox_events
+                 where aggregate_id = :id order by id
+                """
+            )
+            .param("id", documentId)
+            .query(String.class)
+            .list();
+        assertEquals(
+            List.of("document.version.created", "document.published", "document.version.created", "document.published"),
+            types
+        );
+    }
+
+    @Test
+    void reindexReplacesAbandonedBuild() {
+        var version = store("doc-abandoned", "Документ с брошенной сборкой", "public");
+        inTx(() -> repository.markIndexed(version.id(), 1, "e5", 1024, 1));
+        inTx(() -> repository.publish("doc-abandoned", null));
+        // Так выглядит падение индексатора: сборка осталась в building.
+        jdbc.sql(
+            """
+            insert into index_generations (id, version_id, generation, state)
+            values (gen_random_uuid(), :version, 2, 'building')
+            """
+        )
+            .param("version", version.id())
+            .update();
+
+        assertEquals(1, inTx(() -> repository.reindexPublished()));
+
+        // Брошенная сборка не блокирует новую: строка переиспользована, и в
+        // building осталась ровно одна сборка этой версии.
+        assertEquals(
+            1,
+            jdbc
+                .sql(
+                    """
+                    select count(*) from index_generations
+                     where version_id = :version and state = 'building'
+                    """
+                )
+                .param("version", version.id())
+                .query(Integer.class)
+                .single()
+        );
+        assertEquals(
+            2,
+            jdbc
+                .sql(
+                    """
+                    select generation from index_generations
+                     where version_id = :version and state = 'building'
+                    """
+                )
+                .param("version", version.id())
+                .query(Integer.class)
+                .single()
+        );
+    }
+
+    @Test
     void staleGenerationReportIsRejected() {
         var version = store(
             "doc-stale",

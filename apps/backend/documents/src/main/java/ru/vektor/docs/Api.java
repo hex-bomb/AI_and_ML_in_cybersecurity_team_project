@@ -282,6 +282,21 @@ public class Api {
         );
     }
 
+    /** Пересобрать индекс: после восстановления из копии он не восстановится сам. */
+    @PostMapping("/internal/reindex")
+    public ResponseEntity<Object> reindexInternal(
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        checkInternal(token);
+        return ResponseEntity.ok(
+            Map.of("queued", documents.reindexPublished(), "request_id", rid(request))
+        );
+    }
+
     @PostMapping("/internal/documents")
     public ResponseEntity<Object> ingest(@RequestBody IngestRequest body)
         throws Exception {

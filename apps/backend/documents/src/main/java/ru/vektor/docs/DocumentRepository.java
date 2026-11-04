@@ -49,6 +49,16 @@ public class DocumentRepository {
         List<String> groups
     ) {}
 
+    private record ReindexSource(
+        UUID documentId,
+        String externalId,
+        String title,
+        String section,
+        UUID versionId,
+        int generation,
+        String sha256
+    ) {}
+
     /**
      * Один предикат для всех чтений: список, источник, поиск — везде одинаково.
      * Грант без {@code document_id} действует на все документы, без
@@ -196,6 +206,108 @@ public class DocumentRepository {
         }
 
         return new Version(versionId, sha, inserted.isPresent());
+    }
+
+    /**
+     * Переиндексировать опубликованные документы.
+     *
+     * <p>Индекс Elasticsearch производный и в резервную копию не входит: после
+     * восстановления его собирают заново. Номер генерации увеличивается, иначе
+     * отчёт индексатора будет отклонён как устаревший.
+     *
+     * @return сколько документов поставлено в очередь
+     */
+    @Transactional
+    public int reindexPublished() {
+        var sources = jdbc
+            .sql(
+                """
+                select d.id as document_id, d.external_id, d.title, d.section,
+                       v.id as version_id, v.index_generation, v.content_sha256
+                  from documents d
+                  join document_versions v on v.id = d.published_version_id
+                 where d.publication = 'published'
+                   and d.lifecycle = 'active'
+                   and v.processing = 'ready'
+                 order by d.external_id
+                """
+            )
+            .query((rs, row) ->
+                new ReindexSource(
+                    rs.getObject("document_id", UUID.class),
+                    rs.getString("external_id"),
+                    rs.getString("title"),
+                    rs.getString("section"),
+                    rs.getObject("version_id", UUID.class),
+                    rs.getInt("index_generation"),
+                    rs.getString("content_sha256")
+                )
+            )
+            .list();
+
+        for (var source : sources) {
+            var generation = source.generation() + 1;
+            // Брошенная сборка держала бы уникальный индекс «одна сборка на
+            // версию» и не дала бы поставить новую.
+            jdbc.sql(
+                """
+                update index_generations
+                   set state = 'failed', finished_at = now()
+                 where version_id = :version and state = 'building'
+                """
+            )
+                .param("version", source.versionId())
+                .update();
+            jdbc.sql(
+                """
+                update document_versions set index_generation = :generation
+                 where id = :version
+                """
+            )
+                .param("generation", generation)
+                .param("version", source.versionId())
+                .update();
+            // Строка этого номера могла остаться от прошлой неудачной сборки:
+            // номер переиспользуем, иначе восстановление не поставит задание.
+            jdbc.sql(
+                """
+                insert into index_generations (id, version_id, generation, state)
+                values (:id, :version, :generation, 'building')
+                on conflict (version_id, generation) do update
+                   set state = 'building', started_at = now(), finished_at = null
+                """
+            )
+                .param("id", UUID.randomUUID())
+                .param("version", source.versionId())
+                .param("generation", generation)
+                .update();
+
+            enqueue(
+                "document.version.created",
+                source.documentId(),
+                Map.of(
+                    "document_id",
+                    source.documentId().toString(),
+                    "external_id",
+                    source.externalId(),
+                    "version_id",
+                    source.versionId().toString(),
+                    "generation",
+                    generation,
+                    "title",
+                    source.title(),
+                    "section",
+                    source.section(),
+                    "content_sha256",
+                    source.sha256()
+                )
+            );
+            var payload = new HashMap<>(accessPayload(source.documentId()));
+            payload.put("version_id", source.versionId().toString());
+            payload.put("external_id", source.externalId());
+            enqueue("document.published", source.documentId(), payload);
+        }
+        return sources.size();
     }
 
     @Transactional
