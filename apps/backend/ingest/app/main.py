@@ -39,7 +39,11 @@ EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "onnx-local")
 CHUNK_CHARS = int(os.environ.get("CHUNK_CHARS", "1200"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "200"))
 DIMS = int(os.environ.get("EMBEDDING_DIMS", "384"))
-REFRESH = os.environ.get("ES_REFRESH", "false")
+# true, а не false: запись и следующее за ней обновление идут подряд, и без
+# немедленного refresh `_update_by_query` не видит только что записанные чанки —
+# публикация «проходит» с нулём обновлённых документов. wait_for здесь не годится:
+# update_by_query и delete_by_query принимают только true или false.
+REFRESH = os.environ.get("ES_REFRESH", "true")
 
 DOCUMENTS = Counter("ingest_documents_total", "Documents processed", ["status"])
 CHUNKS = Counter("ingest_chunks_total", "Chunks written")
