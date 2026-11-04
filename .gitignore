@@ -31,6 +31,9 @@ apps/backend/embedding/models/
 .site/
 site/
 
+# Резервные копии стенда: содержат данные, не место в репозитории
+backups/
+
 # Локальные секреты
 .env
 .env.local

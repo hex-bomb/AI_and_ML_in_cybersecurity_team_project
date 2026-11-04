@@ -75,6 +75,7 @@ nav:
   - Инфраструктура:
       - Kafka: infrastructure/kafka.md
       - Docker Compose: infrastructure/docker-compose.md
+  - Эксплуатация: operations/runbook.md
   - Справочник:
       - API: reference/api.md
       - Глоссарий: glossary.md

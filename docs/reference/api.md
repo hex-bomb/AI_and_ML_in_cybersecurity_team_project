@@ -57,6 +57,7 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | POST  | `/internal/versions/{versionId}/index`         | `documents` | отчёт индексатора о готовности версии              |
 | GET   | `/internal/documents/{id}/versions/{vid}/text` | `documents` | текст версии для `ingest`                          |
 | POST  | `/internal/extract`                            | `documents` | разобрать файл и вернуть текст                     |
+| POST  | `/internal/reindex`                            | `documents` | пересобрать индекс после restore или смены модели  |
 
 ## Лимиты
 
