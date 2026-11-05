@@ -9,7 +9,15 @@ from app.page_context import parse as parse_page_context
 from app.rag import NO_EVIDENCE
 from app.usecases.ask import AskQuestion, Question
 from app.usecases.ask_file import AskAboutFile, FileQuestion
-from fakes import FakeCompleter, FakeDialogs, FakeEmbedder, FakeExtractor, FakeRetriever, hit
+from fakes import (
+    FakeBinder,
+    FakeCompleter,
+    FakeDialogs,
+    FakeEmbedder,
+    FakeExtractor,
+    FakeRetriever,
+    hit,
+)
 
 # Метка сессии для вызовов соседей: в тестах авторизация не проверяется.
 SESSION = "test-session"
@@ -27,11 +35,13 @@ def ask_question(
     retriever=None,
     completer=None,
     dialogs=None,
+    binder=None,
 ) -> AskQuestion:
     return AskQuestion(
         retriever or FakeRetriever([hit()]),
         completer or FakeCompleter(),
         dialogs or FakeDialogs(),
+        binder=binder,
     )
 
 
@@ -241,6 +251,55 @@ def test_page_context_does_not_change_access_fields() -> None:
 
     assert dialogs.channel == "public"
     assert page["content_key"] == "internal-pricing"
+
+
+def test_binding_focuses_search_on_bound_document() -> None:
+    retriever = FakeRetriever([hit()])
+    dialogs = FakeDialogs()
+    binder = FakeBinder(
+        {"document_ref": "6d21473c-02e8-49a9-8906-32d26d3be2d1", "external_id": "returns-policy"}
+    )
+    page = parse_page_context({"content_key": "returns-policy"})
+
+    asked = Question(
+        text="а для товара со скидкой?",
+        token=SESSION,
+        subject="user-1",
+        client_message_id="msg-bind",
+        page_context=page,
+    )
+    asyncio.run(ask_question(retriever=retriever, dialogs=dialogs, binder=binder)(asked))
+
+    assert binder.keys == ["returns-policy"]
+    assert retriever.focus == "6d21473c-02e8-49a9-8906-32d26d3be2d1"
+    # В истории остаётся разрешённая сервером привязка, а не ключ клиента.
+    assert dialogs.page_context["binding"]["external_id"] == "returns-policy"
+
+
+def test_missing_binding_keeps_question_without_focus() -> None:
+    retriever = FakeRetriever([hit()])
+    binder = FakeBinder(None)
+    page = parse_page_context({"content_key": "unknown"})
+
+    asked = Question(
+        text="вопрос",
+        token=SESSION,
+        subject="user-1",
+        client_message_id="msg-nobind",
+        page_context=page,
+    )
+    asyncio.run(ask_question(retriever=retriever, binder=binder)(asked))
+
+    assert retriever.focus == ""
+    assert retriever.calls == 1, "без привязки поиск всё равно выполняется"
+
+
+def test_binding_is_not_requested_without_content_key() -> None:
+    binder = FakeBinder({"document_ref": "x"})
+
+    asyncio.run(ask_question(binder=binder)(question()))
+
+    assert binder.keys == []
 
 
 def test_file_uses_file_citations() -> None:

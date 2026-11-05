@@ -5,7 +5,15 @@ from uuid import UUID
 
 
 class Retriever(Protocol):
-    async def search(self, query: str, top_k: int, token: str) -> list[dict[str, Any]]: ...
+    async def search(
+        self, query: str, top_k: int, token: str, focus: str = ""
+    ) -> list[dict[str, Any]]: ...
+
+
+class Binder(Protocol):
+    """Привязка страницы к документу: подсказка для поиска, не разрешение."""
+
+    async def binding(self, content_key: str) -> dict[str, Any] | None: ...
 
 
 class Completer(Protocol):

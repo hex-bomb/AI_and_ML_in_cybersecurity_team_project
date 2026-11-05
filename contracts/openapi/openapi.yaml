@@ -348,6 +348,12 @@ components:
       properties:
         query: { type: string, maxLength: 1000, default: "" }
         top_k: { type: integer, minimum: 1, maximum: 10, default: 5 }
+        focus_document_ref:
+          type: string
+          maxLength: 64
+          description: |
+            Документ, к которому привязана страница виджета. Повышает его
+            фрагменты в выдаче, но не ограничивает поиск и не меняет доступ.
     SearchHit:
       type: object
       required:

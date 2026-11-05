@@ -86,7 +86,7 @@ func TestToHitBuildsDownloadURL(t *testing.T) {
 func TestScopeFilterUsesIndexFields(t *testing.T) {
 	// Имена полей в фильтре должны совпадать с маппингом ingest: расхождение
 	// не даёт ошибки, а молча исключает все документы из выдачи.
-	raw, err := json.Marshal(LexicalBody(Scope{Channels: []string{"public"}}, "q", 5))
+	raw, err := json.Marshal(LexicalBody(Scope{Channels: []string{"public"}}, "q", 5, ""))
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -100,5 +100,24 @@ func TestScopeFilterUsesIndexFields(t *testing.T) {
 	}
 	if !strings.Contains(body, `"group_keys":[]`) {
 		t.Errorf("nil-группы должны сериализоваться в пустой массив: %s", body)
+	}
+}
+
+func TestFocusBoostsWithoutFiltering(t *testing.T) {
+	// Привязка страницы — предпочтение: документ получает boost, но остальные
+	// не исключаются, иначе подсказка клиента стала бы фильтром доступа.
+	raw, err := json.Marshal(
+		LexicalBody(Scope{Channels: []string{"public"}}, "q", 5, "doc-ref"),
+	)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	body := string(raw)
+
+	if !strings.Contains(body, `"document_ref":{"boost":3,"value":"doc-ref"}`) {
+		t.Errorf("нет повышения для привязанного документа: %s", body)
+	}
+	if strings.Contains(body, `"filter":[{"term":{"document_ref"`) {
+		t.Errorf("привязка попала в фильтр: %s", body)
 	}
 }

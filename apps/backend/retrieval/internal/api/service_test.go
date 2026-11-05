@@ -61,7 +61,7 @@ func scope() search.Scope {
 }
 
 func TestSearchFallsBackToLexicalWhenEmbeddingFails(t *testing.T) {
-	hits, err := service(t, false, true).Search(context.Background(), scope(), "гарантия", 3)
+	hits, err := service(t, false, true).Search(context.Background(), scope(), "гарантия", 3, "")
 	if err != nil {
 		t.Fatalf("отказ embedding не должен быть ошибкой поиска: %v", err)
 	}
@@ -71,21 +71,21 @@ func TestSearchFallsBackToLexicalWhenEmbeddingFails(t *testing.T) {
 }
 
 func TestSearchFailsWhenBothWaysAreDown(t *testing.T) {
-	hits, err := service(t, false, true).Search(context.Background(), scope(), "гарантия", 3)
+	hits, err := service(t, false, true).Search(context.Background(), scope(), "гарантия", 3, "")
 	if err != nil || len(hits) == 0 {
 		t.Fatalf("лексика жива, отказ embedding не должен валить запрос: hits=%+v err=%v", hits, err)
 	}
 
-	if _, err := service(t, true, false).Search(context.Background(), scope(), "гарантия", 3); err == nil {
+	if _, err := service(t, true, false).Search(context.Background(), scope(), "гарантия", 3, ""); err == nil {
 		t.Fatal("ES недоступен — недоступны обе ветки, нужна ошибка")
 	}
-	if _, err := service(t, true, true).Search(context.Background(), scope(), "гарантия", 3); err == nil {
+	if _, err := service(t, true, true).Search(context.Background(), scope(), "гарантия", 3, ""); err == nil {
 		t.Fatal("при отказе обеих веток поиска нужна ошибка")
 	}
 }
 
 func TestSearchFusesBothRankings(t *testing.T) {
-	hits, err := service(t, false, false).Search(context.Background(), scope(), "гарантия", 3)
+	hits, err := service(t, false, false).Search(context.Background(), scope(), "гарантия", 3, "")
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}

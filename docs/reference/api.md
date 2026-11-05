@@ -58,6 +58,8 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | GET   | `/internal/documents/{id}/versions/{vid}/text` | `documents` | текст версии для `ingest`                          |
 | POST  | `/internal/extract`                            | `documents` | разобрать файл и вернуть текст                     |
 | POST  | `/internal/reindex`                            | `documents` | пересобрать индекс после restore или смены модели  |
+| GET   | `/internal/page-bindings/{contentKey}`         | `documents` | документ, привязанный к странице виджета           |
+| POST  | `/internal/page-bindings`                      | `documents` | создать привязку страницы (сид, интеграции)        |
 
 ## Лимиты
 
@@ -67,6 +69,7 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | Файл                     | 5 МиБ                    | Spring multipart + явная проверка в `documents` |
 | `question`               | 1–4000 символов          | pydantic в `answer`                             |
 | `query`                  | ≤ 1000                   | `retrieval`                                     |
+| `focus_document_ref`     | ≤ 64                     | `retrieval`                                     |
 | `conversation_id`        | uuid                     | pydantic в `answer`                             |
 | `client_message_id`      | ≤ 100 символов           | pydantic в `answer`                             |
 | `page_context`           | поля обрезаются          | `app/page_context.py` в `answer`                |

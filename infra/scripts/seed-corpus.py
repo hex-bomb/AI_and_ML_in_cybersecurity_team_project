@@ -6,6 +6,10 @@ X-Internal-Token, как его ждут /internal/* эндпоинты document
 После загрузки документ не виден в поиске: индексатор должен отчитаться о
 готовности, и только потом версию можно опубликовать. Скрипт ждёт готовности
 и публикует — иначе корпус остался бы черновиками.
+
+Затем каждый документ привязывается к странице: content_key совпадает с id
+документа. Так демо-страница может разметить блок как
+`data-assistant-content="about-vektor"`, и поиск поднимет этот документ.
 """
 
 import json
@@ -21,6 +25,7 @@ CORPUS = pathlib.Path(__file__).resolve().parent / "data" / "corpus.json"
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 BASE = os.environ.get("DOCUMENTS_SEED_URL", "http://127.0.0.1:18081")
 URL = BASE + "/internal/documents"
+BINDINGS_URL = BASE + "/internal/page-bindings"
 DEADLINE_SECONDS = 180
 POLL_SECONDS = 2
 
@@ -86,6 +91,13 @@ def publish(external_id: str) -> None:
         time.sleep(POLL_SECONDS)
 
 
+def bind(content_key: str, external_id: str) -> None:
+    """Привязка страницы: без неё content_key из разметки ни на что не укажет."""
+    status = call(BINDINGS_URL, {"content_key": content_key, "external_id": external_id})
+    if status >= 400:
+        raise SystemExit(f">> корпус: привязка {content_key} — {status}")
+
+
 def main() -> None:
     documents = json.loads(CORPUS.read_text(encoding="utf-8"))["documents"]
     for document in documents:
@@ -101,7 +113,10 @@ def main() -> None:
     for document in documents:
         publish(document["id"])
 
-    print(f">> корпус: {len(documents)} документов опубликовано")
+    for document in documents:
+        bind(document["id"], document["id"])
+
+    print(f">> корпус: {len(documents)} документов опубликовано и привязано")
 
 
 if __name__ == "__main__":
