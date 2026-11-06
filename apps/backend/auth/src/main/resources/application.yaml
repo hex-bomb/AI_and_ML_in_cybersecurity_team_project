@@ -42,10 +42,13 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # Vault опционален (import: optional:vault://). Без этого флага
+    # /actuator/health отдаёт 503, и контейнер навсегда остаётся unhealthy.
+    vault:
+      enabled: false
 
 auth:
-  tenant-id: ${AUTH_TENANT_ID:11111111-1111-4111-8111-111111111111}
-  kb-id: ${AUTH_KB_ID:74ade984-591f-4382-a051-ef1898855868}
   session-ttl: ${AUTH_SESSION_TTL:28800}
   # Практически бессрочный токен, только для сервисного аккаунта admin
   admin-session-ttl: ${AUTH_ADMIN_SESSION_TTL:3153600000}

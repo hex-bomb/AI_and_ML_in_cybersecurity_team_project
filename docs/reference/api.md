@@ -27,18 +27,20 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 
 ## Эндпоинты
 
-| Метод | Путь                                    | Доступ             | Сервис                  |
-| ----- | --------------------------------------- | ------------------ | ----------------------- |
-| POST  | `/api/v1/auth/login`                    | открыт             | `auth`                  |
-| POST  | `/api/v1/auth/logout`                   | открыт             | `auth`                  |
-| GET   | `/api/v1/auth/me`                       | cookie             | `auth`                  |
-| GET   | `/.well-known/jwks.json`                | открыт             | `auth`                  |
-| POST  | `/api/v1/search`                        | cookie             | `retrieval`             |
-| POST  | `/api/v1/answers`                       | cookie             | `answer`                |
-| POST  | `/api/v1/answers/file`                  | cookie             | `answer` -> `documents` |
-| GET   | `/api/v1/documents`                     | cookie + сотрудник | `documents`             |
-| POST  | `/api/v1/documents`                     | cookie + сотрудник | `documents`             |
-| GET   | `/api/v1/documents/{documentId}/source` | cookie             | `documents`             |
+| Метод | Путь                                      | Доступ             | Сервис                  |
+| ----- | ----------------------------------------- | ------------------ | ----------------------- |
+| POST  | `/api/v1/auth/login`                      | открыт             | `auth`                  |
+| POST  | `/api/v1/auth/logout`                     | открыт             | `auth`                  |
+| GET   | `/api/v1/auth/me`                         | cookie             | `auth`                  |
+| GET   | `/.well-known/jwks.json`                  | открыт             | `auth`                  |
+| POST  | `/api/v1/search`                          | cookie             | `retrieval`             |
+| POST  | `/api/v1/answers`                         | cookie             | `answer`                |
+| POST  | `/api/v1/answers/file`                    | cookie             | `answer` -> `documents` |
+| GET   | `/api/v1/documents`                       | cookie + сотрудник | `documents`             |
+| POST  | `/api/v1/documents`                       | cookie + сотрудник | `documents`             |
+| GET   | `/api/v1/documents/{documentId}/source`   | cookie             | `documents`             |
+| POST  | `/api/v1/documents/{documentId}/publish`  | cookie + сотрудник | `documents`             |
+| POST  | `/api/v1/documents/{documentId}/withdraw` | cookie + сотрудник | `documents`             |
 
 Сессия — JWT в httpOnly cookie `vektor_session` с `SameSite=Lax`. Заголовок
 `Authorization: Bearer` поддерживается для вызовов между сервисами.
@@ -51,8 +53,13 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | Метод | Путь                                           | Сервис      | Назначение                                         |
 | ----- | ---------------------------------------------- | ----------- | -------------------------------------------------- |
 | POST  | `/internal/documents`                          | `documents` | залить текст без файла (сид корпуса), идемпотентно |
+| POST  | `/internal/publish/{externalId}`               | `documents` | опубликовать готовую версию для сида               |
+| POST  | `/internal/versions/{versionId}/index`         | `documents` | отчёт индексатора о готовности версии              |
 | GET   | `/internal/documents/{id}/versions/{vid}/text` | `documents` | текст версии для `ingest`                          |
 | POST  | `/internal/extract`                            | `documents` | разобрать файл и вернуть текст                     |
+| POST  | `/internal/reindex`                            | `documents` | пересобрать индекс после restore или смены модели  |
+| GET   | `/internal/page-bindings/{contentKey}`         | `documents` | документ, привязанный к странице виджета           |
+| POST  | `/internal/page-bindings`                      | `documents` | создать привязку страницы (сид, интеграции)        |
 
 ## Лимиты
 
@@ -62,7 +69,10 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | Файл                     | 5 МиБ                    | Spring multipart + явная проверка в `documents` |
 | `question`               | 1–4000 символов          | pydantic в `answer`                             |
 | `query`                  | ≤ 1000                   | `retrieval`                                     |
-| `history`                | ≤ 20 реплик по 1000      | pydantic в `answer`                             |
+| `focus_document_ref`     | ≤ 64                     | `retrieval`                                     |
+| `conversation_id`        | uuid                     | pydantic в `answer`                             |
+| `client_message_id`      | ≤ 100 символов           | pydantic в `answer`                             |
+| `page_context`           | поля обрезаются          | `app/page_context.py` в `answer`                |
 | `top_k`                  | 1–10                     | `retrieval`                                     |
 | Частота, обычные запросы | 20 rps на IP             | router (`limit_req zone=main`)                  |
 | Частота, `/auth/login`   | 2 rps на IP, ответ `429` | router (`limit_req zone=login`)                 |
@@ -97,7 +107,9 @@ Java-сервисы отдают схему через springdoc, Python — ч�
 | 401  | `UNAUTHORIZED`        | нет cookie, истёк или испорчен токен                          |
 | 403  | `FORBIDDEN`           | нет роли, запрос отклонён guard                               |
 | 404  | `NOT_FOUND`           | документа нет или он недоступен                               |
-| 404  | `KB_NOT_FOUND`        | `kb_id` не совпал с базой из сессии                           |
+| 404  | `CONVERSATION_NOT_FOUND` | диалога нет или он принадлежит другому пользователю        |
+| 409  | `TURN_IN_PROGRESS`    | в диалоге уже идёт генерация                                  |
+| 409  | `IDEMPOTENCY_CONFLICT` | `client_message_id` уже использован с другим вопросом        |
 | 413  | `PAYLOAD_TOO_LARGE`   | файл или тело больше лимита                                   |
 | 429  | —                     | превышен лимит router; тело — штатное для nginx, без конверта |
 | 502  | `LLM_BAD_OUTPUT`      | модель вернула пустой ответ                                   |

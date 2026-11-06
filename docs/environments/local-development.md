@@ -56,7 +56,7 @@ curl -sS http://localhost:8080/api/v1/auth/login \
 
 curl -sS -b /tmp/j http://localhost:8080/api/v1/search \
   -H 'Content-Type: application/json' \
-  -d '{"kb_id":"74ade984-591f-4382-a051-ef1898855868","query":"гарантия","top_k":3}'
+  -d '{"query":"гарантия","top_k":3}'
 ```
 
 `make smoke` делает то же самое и печатает коды ответов: `login`, `search`,
@@ -184,7 +184,7 @@ Java-сервисы читают ключ через окружение (`AUTH_S
 docker compose ps
 docker compose logs -f ingest
 docker compose exec postgres psql -U vektor -d vektor_docs -c '\dt'
-docker compose exec elasticsearch curl -s 'localhost:9200/vektor-chunks/_count'
+docker compose exec elasticsearch curl -s 'localhost:9200/vektor-chunks-v2/_count'
 ```
 
 ## Ограничения стенда

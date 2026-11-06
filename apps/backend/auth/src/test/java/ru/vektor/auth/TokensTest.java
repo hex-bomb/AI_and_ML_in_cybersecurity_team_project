@@ -36,8 +36,7 @@ class TokensTest {
             "Иван",
             "employee",
             List.of("public", "employee"),
-            "tenant",
-            "kb",
+            List.of("legal"),
             60
         );
 
@@ -45,6 +44,7 @@ class TokensTest {
 
         assertEquals("employee", claims.getClaim("role"));
         assertEquals(List.of("public", "employee"), claims.getClaim("scp"));
+        assertEquals(List.of("legal"), claims.getClaim("grp"));
     }
 
     @Test
@@ -54,8 +54,7 @@ class TokensTest {
             "Иван",
             "employee",
             List.of("public"),
-            "tenant",
-            "kb",
+            List.of(),
             -1
         );
 

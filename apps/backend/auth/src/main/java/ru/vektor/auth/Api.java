@@ -25,8 +25,6 @@ public class Api {
     private final UserRepository users;
     private final Tokens tokens;
     private final LoginThrottle throttle;
-    private final String tenantId;
-    private final String kbId;
     private final long ttl;
     private final long adminTtl;
     private final String cookieName;
@@ -37,8 +35,6 @@ public class Api {
         UserRepository users,
         Tokens tokens,
         LoginThrottle throttle,
-        @Value("${auth.tenant-id}") String tenantId,
-        @Value("${auth.kb-id}") String kbId,
         @Value("${auth.session-ttl}") long ttl,
         @Value("${auth.admin-session-ttl:3153600000}") long adminTtl,
         @Value("${auth.cookie-name}") String cookieName,
@@ -47,8 +43,6 @@ public class Api {
         this.users = users;
         this.tokens = tokens;
         this.throttle = throttle;
-        this.tenantId = tenantId;
-        this.kbId = kbId;
         this.ttl = ttl;
         this.adminTtl = adminTtl;
         this.cookieName = cookieName;
@@ -102,8 +96,7 @@ public class Api {
                 user.name(),
                 user.role(),
                 scopes(user.role()),
-                tenantId,
-                kbId,
+                users.groups(user.id()),
                 effectiveTtl
             );
         } catch (Exception exception) {
@@ -184,7 +177,7 @@ public class Api {
         return tokens.jwks();
     }
 
-    // Единственное место, где роль превращается в аудитории: остальные сервисы
+    // Единственное место, где роль превращается в каналы: остальные сервисы
     // доверяют только scopes из токена, а не полю role.
     static List<String> scopes(String role) {
         return switch (role) {

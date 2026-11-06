@@ -60,6 +60,7 @@ nav:
   - Главная: index.md
   - Архитектура:
       - Обзор: architecture/overview.md
+      - Модель данных: architecture/data-model.md
       - Как расширять: architecture/extensibility.md
   - Сервисы:
       - auth: services/auth.md
@@ -74,6 +75,7 @@ nav:
   - Инфраструктура:
       - Kafka: infrastructure/kafka.md
       - Docker Compose: infrastructure/docker-compose.md
+  - Эксплуатация: operations/runbook.md
   - Справочник:
       - API: reference/api.md
       - Глоссарий: glossary.md

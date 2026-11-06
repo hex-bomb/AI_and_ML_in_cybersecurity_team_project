@@ -19,11 +19,14 @@ import (
 // Серверный WriteTimeout должен быть больше этого дедлайна.
 const requestTimeout = 15 * time.Second
 
-// SearchRequest — тело POST /api/v1/search.
+// SearchRequest — тело POST /api/v1/search. База знаний одна, поэтому scope
+// берётся из сессии, а не из тела.
 type SearchRequest struct {
-	KBID  string `json:"kb_id"`
 	Query string `json:"query"`
 	TopK  int    `json:"top_k"`
+	// FocusDocumentRef — документ, к которому привязана страница виджета.
+	// Повышает его фрагменты, но не ограничивает выдачу и не меняет доступ.
+	FocusDocumentRef string `json:"focus_document_ref"`
 }
 
 // SearchResponse — ответ POST /api/v1/search; Status принимает "ok" или "no_results".
@@ -35,7 +38,7 @@ type SearchResponse struct {
 
 // SearchService — то, что нужно HTTP-слою от ядра поиска.
 type SearchService interface {
-	Search(ctx context.Context, scope search.Scope, query string, topK int) ([]search.Hit, error)
+	Search(ctx context.Context, scope search.Scope, query string, topK int, focus string) ([]search.Hit, error)
 }
 
 // Handler держит зависимости HTTP-слоя; маршруты регистрирует Routes.
@@ -89,7 +92,7 @@ func (h *Handler) searchHandler(w http.ResponseWriter, r *http.Request, claims j
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Некорректный запрос", rid)
 		return
 	}
-	if req.KBID == "" || len(req.KBID) > 64 || len(req.Query) > 1000 {
+	if len(req.Query) > 1000 {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Некорректный запрос", rid)
 		return
 	}
@@ -100,16 +103,11 @@ func (h *Handler) searchHandler(w http.ResponseWriter, r *http.Request, claims j
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "top_k вне диапазона 1..10", rid)
 		return
 	}
-	// Чужая база неотличима от несуществующей.
-	if req.KBID != claims.KB {
-		writeError(w, http.StatusNotFound, "KB_NOT_FOUND", "Неизвестная база знаний", rid)
-		return
-	}
 	if strings.TrimSpace(req.Query) == "" {
 		writeJSON(w, http.StatusOK, SearchResponse{Status: "no_results", Hits: []search.Hit{}, RequestID: rid})
 		return
 	}
-	// Пустой scp — ни одной разрешённой аудитории, значит доступа нет.
+	// Пустой scp — ни одного разрешённого канала, значит доступа нет.
 	if len(claims.Scp) == 0 {
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "Доступ запрещён", rid)
 		return
@@ -118,8 +116,12 @@ func (h *Handler) searchHandler(w http.ResponseWriter, r *http.Request, claims j
 	ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
 	defer cancel()
 
-	scope := search.Scope{KB: req.KBID, Audiences: claims.Scp}
-	hits, err := h.search.Search(ctx, scope, req.Query, req.TopK)
+	scope := search.Scope{Channels: claims.Channels(), Groups: claims.Grp}
+	if len(req.FocusDocumentRef) > 64 {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "focus_document_ref слишком длинный", rid)
+		return
+	}
+	hits, err := h.search.Search(ctx, scope, req.Query, req.TopK, req.FocusDocumentRef)
 	if err != nil {
 		slog.Error("search failed", "err", err)
 		writeError(w, http.StatusServiceUnavailable, "SEARCH_UNAVAILABLE", "Поиск недоступен", rid)

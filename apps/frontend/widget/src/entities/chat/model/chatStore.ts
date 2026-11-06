@@ -10,9 +10,10 @@ import {
   deleteChat,
   getMessages,
   listChats,
+  setConversationId,
   setStoreRole,
 } from "@/shared/db/chats"
-import type { AnswerResponse, AnswerTurn, Citation } from "@/shared/types/api"
+import type { AnswerResponse, Citation, PageContext } from "@/shared/types/api"
 import type { Chat, ChatMessage, ChatStatus } from "@/shared/types/chat"
 
 /* конфигурация виджета */
@@ -52,8 +53,19 @@ export const draftChanged = createEvent<string>()
 /** Сессия пропала (выход или 401): чужой транскрипт больше не показываем. */
 export const sessionCleared = createEvent()
 
+/** Контекст страницы от хоста: выделение, заголовок, привязка разметки. */
+export const pageContextChanged = createEvent<PageContext | null>()
+
 /** Пришёл ответ `/auth/me` или `/auth/login`. `null` — гость. */
 export const sessionChanged = createEvent<Session | null>()
+
+/**
+ * Текущий контекст страницы. Живёт до смены диалога, явного сброса пользователем
+ * или навигации в хосте: устаревший контекст хуже, чем его отсутствие.
+ */
+export const $pageContext = createStore<PageContext | null>(null)
+  .on(pageContextChanged, (_, context) => context)
+  .reset(sessionCleared)
 
 export const $session = createStore<Session | null>(null)
   .on(sessionChanged, (_, session) => session)
@@ -86,13 +98,23 @@ const appendMessageFx = createEffect(
 )
 
 /**
- * Один запрос `/answers`. История диалога уходит на сервер явно: бэкенд берёт
- * последние восемь реплик и передаёт их модели как контекст. Демо-токен не
- * обновляется, поэтому 401 означает «войдите снова», а не повтор запроса.
+ * Один запрос `/answers`. История диалога хранится на сервере: клиент передаёт
+ * только идентификатор диалога и ключ намерения. Демо-токен не обновляется,
+ * поэтому 401 означает «войдите снова», а не повтор запроса.
  */
 const answerFx = createEffect(
-  async ({ question, history }: { question: string; history: AnswerTurn[] }): Promise<AnswerResponse> => {
-    const { apiUrl, kbId, useMock } = $config.getState()
+  async ({
+    question,
+    conversationId,
+    clientMessageId,
+    pageContext,
+  }: {
+    question: string
+    conversationId?: string
+    clientMessageId: string
+    pageContext: PageContext | null
+  }): Promise<AnswerResponse> => {
+    const { apiUrl, useMock } = $config.getState()
     if (useMock) return mockAnswer(question)
 
     if ($session.getState() === null) {
@@ -104,7 +126,15 @@ const answerFx = createEffect(
     }
 
     try {
-      return await generateAnswer({ kb_id: kbId, question, history }, { apiUrl })
+      return await generateAnswer(
+        {
+          question,
+          conversation_id: conversationId,
+          client_message_id: clientMessageId,
+          ...(pageContext ? { page_context: pageContext } : {}),
+        },
+        { apiUrl },
+      )
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 401) sessionCleared()
       throw error
@@ -112,26 +142,38 @@ const answerFx = createEffect(
   },
 )
 
-/** Всё, что делает один шаг диалога: реплика пользователя и контекст до неё. */
+/** Всё, что делает один шаг диалога: реплика пользователя и диалог на сервере. */
 type Turn = {
   userMessage: ChatMessage
-  history: AnswerTurn[]
+  conversationId?: string
+  pageContext: PageContext | null
 }
 
 /** Возврат шага. Тип задан явно: ниже `$chatStore` выводится из него. */
 type TurnResult = {
   chatId: string
+  conversationId: string
   requestId: string
   answer: ChatMessage
 }
 
-const sendTurnFx = createEffect(async ({ userMessage, history }: Turn): Promise<TurnResult> => {
+const sendTurnFx = createEffect(async ({ userMessage, conversationId, pageContext }: Turn): Promise<TurnResult> => {
   // Диалога ещё нет — первый вопрос создаёт его на лету.
   const chatId = $chatStore.getState().activeChatId ?? (await createChatFx()).id
 
   await appendMessageFx({ chatId, message: userMessage })
 
-  const response = await answerFx({ question: userMessage.text, history })
+  // id реплики — он же ключ идемпотентности: повтор после обрыва сети вернёт
+  // тот же ответ, а не создаст вторую реплику.
+  const response = await answerFx({
+    question: userMessage.text,
+    conversationId,
+    clientMessageId: userMessage.id,
+    pageContext,
+  })
+
+  if (!conversationId) await setConversationId(chatId, response.conversation_id)
+
   const answer: ChatMessage = {
     id: crypto.randomUUID(),
     role: "assistant",
@@ -141,16 +183,13 @@ const sendTurnFx = createEffect(async ({ userMessage, history }: Turn): Promise<
   }
 
   await appendMessageFx({ chatId, message: answer })
-  return { chatId, requestId: response.request_id, answer }
+  return {
+    chatId,
+    conversationId: response.conversation_id,
+    requestId: response.request_id,
+    answer,
+  }
 })
-
-/** Последние реплики диалога в той форме, которую ждёт `/answers`. */
-function historyOf(messages: ChatMessage[]): AnswerTurn[] {
-  return messages
-    .filter((message) => message.text.trim().length > 0)
-    .slice(-8)
-    .map((message) => ({ role: message.role, text: message.text }))
-}
 
 /**
  * Параметры шага собираются один раз: id реплики попадает и в оптимистичное
@@ -230,12 +269,14 @@ export const $chatStore = createStore<State>(initial)
       : state,
   )
 
-  .on(sendTurnFx.doneData, (state, { chatId, requestId, answer }) => ({
+  .on(sendTurnFx.doneData, (state, { chatId, conversationId, requestId, answer }) => ({
     ...state,
     activeChatId: state.activeChatId ?? chatId,
     // Превью в списке диалогов — последнее сообщение; порядок задаёт createdAt.
+    // conversationId приходит из первого ответа: без него следующий вопрос
+    // создал бы на сервере новый диалог.
     chats: state.chats.map((chat) =>
-      chat.id === chatId ? { ...chat, preview: answer.text } : chat,
+      chat.id === chatId ? { ...chat, preview: answer.text, conversationId } : chat,
     ),
     // Пока ждали ответ, пользователь мог открыть другой диалог: чужую реплику
     // в текущий транскрипт не добавляем.
@@ -292,8 +333,8 @@ export const $canSend = combine(
 
 /* цепочки */
 
-// Транскрипт читается из стора до того, как новая реплика попадёт в него,
-// поэтому она не окажется в собственном контексте.
+// Диалог на сервере ищется по активному чату: транскрипт клиента в промпт
+// больше не попадает.
 sample({
   clock: messageSent,
   source: $chatStore,
@@ -307,13 +348,18 @@ sample({
         text: trimmed,
         createdAt: new Date().toISOString(),
       },
-      history: historyOf(state.messages),
+      conversationId: state.chats.find((chat) => chat.id === state.activeChatId)?.conversationId,
+      pageContext: $pageContext.getState(),
     }
   },
   target: turnRequested,
 })
 
 sample({ clock: turnRequested, target: sendTurnFx })
+
+// Смена диалога сбрасывает контекст: он относится к странице, а не к переписке,
+// и в новом диалоге выглядел бы как привязка, которой нет.
+sample({ clock: [chatSelected, chatCreated], fn: () => null, target: pageContextChanged })
 sample({ clock: chatsOpened, target: loadChatsFx })
 sample({ clock: chatSelected, target: loadMessagesFx })
 sample({ clock: chatCreated, target: createChatFx })

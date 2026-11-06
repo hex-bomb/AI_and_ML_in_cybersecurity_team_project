@@ -2,16 +2,19 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, Literal
+from typing import Any
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
 from pydantic import BaseModel, Field
 
-from app.deps import Auth, ask_about_file, ask_question, authenticated, get_clients
+from app.deps import Auth, ask_about_file, ask_question, authenticated, get_clients, get_dialogs
 from app.errors import AppError
-from app.settings import MAX_UPLOAD
+from app.page_context import parse as parse_page_context
+from app.ports import Dialogs
+from app.settings import MAX_UPLOAD, TURN_STALE_SECONDS
 from app.usecases.ask import AskQuestion, Question
 from app.usecases.ask_file import AskAboutFile, FileQuestion
 
@@ -24,23 +27,28 @@ LATENCY = Histogram("http_request_duration_seconds", "Request duration", ["path"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    yield
-    await get_clients().close()
+    dialogs = get_dialogs()
+    await dialogs.start(TURN_STALE_SECONDS)
+    try:
+        yield
+    finally:
+        await get_clients().close()
+        await dialogs.close()
 
 
 app = FastAPI(title="vektor-answer", lifespan=lifespan)
 app.mount("/metrics", make_asgi_app())
 
 
-class Turn(BaseModel):
-    role: Literal["user", "assistant"]
-    text: str = Field(min_length=1, max_length=1000)
-
-
 class AnswerRequest(BaseModel):
-    kb_id: str = Field(min_length=1, max_length=64)
     question: str = Field(min_length=1, max_length=4000)
-    history: list[Turn] = Field(default_factory=list, max_length=20)
+    # Пустой — сервер создаст новый диалог и вернёт его идентификатор.
+    conversation_id: UUID | None = None
+    # Ключ намерения клиента: повтор с тем же ключом не создаёт новую реплику.
+    client_message_id: str | None = Field(default=None, min_length=1, max_length=100)
+    # Контекст страницы из виджета. Недоверенный: поля обрезаются, доступ от него
+    # не зависит.
+    page_context: dict[str, Any] | None = None
 
 
 def rid(request: Request) -> str:
@@ -87,7 +95,9 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 
 @app.get("/healthz")
-async def healthz() -> dict[str, str]:
+async def healthz(dialogs: Dialogs = Depends(get_dialogs)) -> dict[str, str]:
+    """Готовность включает базу: без неё сервис не может принять ни один вопрос."""
+    await dialogs.ping()
     return {"status": "ok"}
 
 
@@ -98,21 +108,19 @@ async def answers(
     auth: Auth = Depends(authenticated),
     ask: AskQuestion = Depends(ask_question),
 ) -> JSONResponse:
-    if payload.kb_id != auth.claims.get("kb"):
-        raise AppError.kb_not_found()
     if not auth.claims.get("scp"):
         raise AppError.forbidden()
 
     result = await ask(
         Question(
-            kb_id=payload.kb_id,
             text=payload.question.strip(),
-            history=tuple(
-                f"{turn.role}: {' '.join(turn.text.split())}"
-                for turn in payload.history
-                if turn.text.strip()
-            ),
             token=auth.token,
+            subject=str(auth.claims.get("sub") or ""),
+            channel="internal" if "employee" in (auth.claims.get("scp") or []) else "public",
+            conversation_id=payload.conversation_id,
+            client_message_id=payload.client_message_id,
+            request_id=rid(request),
+            page_context=parse_page_context(payload.page_context),
         )
     )
     return answer_response(result, request)

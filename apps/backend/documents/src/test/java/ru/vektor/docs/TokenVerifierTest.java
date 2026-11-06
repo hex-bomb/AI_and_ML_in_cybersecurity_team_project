@@ -88,10 +88,8 @@ class TokenVerifierTest {
         var claims = verifier.verify(token("admin", ISSUER, 60));
 
         assertTrue(claims.employee());
-        assertTrue(claims.canRead("employee"));
-        assertTrue(claims.canRead("public"));
-        assertEquals("kb", claims.kb());
-        assertEquals("tenant", claims.tenant());
+        assertEquals(List.of("public", "internal"), claims.channels());
+        assertEquals(List.of("legal"), claims.groups());
     }
 
     @Test
@@ -102,7 +100,7 @@ class TokenVerifierTest {
         var claims = verifier.verify(token);
 
         assertFalse(claims.employee());
-        assertFalse(claims.canRead("employee"));
+        assertEquals(List.of("public"), claims.channels());
     }
 
     @Test
@@ -182,8 +180,7 @@ class TokenVerifierTest {
             .subject("id-1")
             .claim("role", role)
             .claim("scp", scopes)
-            .claim("tenant", "tenant")
-            .claim("kb", "kb")
+            .claim("grp", List.of("legal"))
             .expirationTime(Date.from(Instant.now().plusSeconds(ttlSeconds)))
             .build();
         var jwt = new SignedJWT(

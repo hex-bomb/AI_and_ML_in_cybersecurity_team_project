@@ -118,8 +118,9 @@ answer/app/
   main.py          сборка: роуты, middleware, обработчики ошибок
   deps.py          authenticated + сборка сценариев над адаптерами
   errors.py        AppError с кодами; нейтральные Unavailable/BadRequest
-  ports.py         Retriever, Completer, Embedder, TextExtractor
-  settings.py      TOP_K, MAX_UPLOAD и прочие значения из окружения
+  ports.py         Retriever, Completer, Embedder, TextExtractor, Dialogs
+  db.py            пул, миграции и SQL диалогов
+  settings.py      TOP_K, MAX_UPLOAD, ANSWER_DATABASE_URL и прочие значения из окружения
   usecases/        ask.py, ask_file.py, common.py
   rag.py           чистое ядро: промпт, разбор ответа, цитаты, нарезка
   guard.py         политика: инъекции в промпт и платёжные данные
@@ -130,17 +131,24 @@ answer/app/
 
 ```python
 class AskQuestion:
-    def __init__(self, retriever: Retriever, completer: Completer, top_k: int = 4) -> None:
-        self._retriever, self._completer, self._top_k = retriever, completer, top_k
+    def __init__(
+        self, retriever: Retriever, completer: Completer, dialogs: Dialogs, top_k: int = 4
+    ) -> None:
+        self._retriever, self._completer = retriever, completer
+        self._dialogs, self._top_k = dialogs, top_k
 
     async def __call__(self, question: Question) -> dict:
+        started = await self._dialogs.begin(...)      # реплика и история диалога
         reason = blocked_reason(question.text)
         if reason:
             raise AppError.forbidden("Запрос отклонён политикой безопасности", {"reason": reason})
-        hits = await self._retriever.search(question.kb_id, question.text, self._top_k, question.token)
+        hits = await self._retriever.search(question.text, self._top_k, question.token)
         if not hits:
-            return {"status": "no_evidence", "answer": NO_EVIDENCE, "citations": []}
-        return await answer_from_hits(self._completer, question.text, question.history, hits)
+            result, hits = {"status": "no_evidence", "answer": NO_EVIDENCE, "citations": []}, []
+        else:
+            result = await answer_from_hits(self._completer, question.text, started.history, hits)
+        await self._dialogs.finish(...)                # ответ, цитаты, идемпотентность
+        return result
 ```
 
 Тест такого сценария не поднимает HTTP и не трогает `httpx`: адаптеры подменяются
@@ -335,13 +343,13 @@ Outbox и DLQ появятся, когда будет первый реальн�
 5. `router.conf` — только публичные пути; `/internal/*` не маршрутизируются.
 6. `docs/services/<имя>.md` и строка в `README.md`.
 
-### Новая аудитория
+### Новый канал или группа
 
-1. Словарь аудиторий (пока — константы в `auth`, затем `contracts/vocab/`).
-2. Миграция с расширением `CHECK`.
-3. `scopes()` в `auth` и фильтр в запросе к Elasticsearch.
-4. Тест: токен с новой аудиторией видит документы этой аудитории и не видит
-   чужие.
+1. Словарь каналов (`public`, `internal`) и групп — в `auth`.
+2. Миграция с расширением `CHECK` в `access_grants`.
+3. Новая роль или группа в `scopes()`/`grp` в `auth`, каналы в `Claims.Channels()`
+   и фильтр в запросе к Elasticsearch.
+4. Тест: токен с новой группой видит документы этой группы и не видит чужие.
 
 ## Автоматические проверки
 

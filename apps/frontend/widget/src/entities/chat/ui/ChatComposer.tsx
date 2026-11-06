@@ -1,7 +1,7 @@
 import { useRef } from "react"
 import { useUnit } from "effector-react"
 import { motion } from "motion/react"
-import { ArrowUpIcon, PaperclipIcon } from "lucide-react"
+import { ArrowUpIcon, PaperclipIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,28 +10,54 @@ import {
   $canSend,
   $draft,
   $isBusy,
+  $pageContext,
   attachmentsAdded,
   draftChanged,
   messageSent,
+  pageContextChanged,
 } from "@/entities/chat/model/chatStore"
 
 /** Поле ввода. Отправка — Enter или кнопка, слева — добавление вложений. */
 export function ChatComposer() {
-  const { draft, busy, canSend, files, setDraft, send, addFiles } = useUnit({
+  const { draft, busy, canSend, files, context, setDraft, send, addFiles, clearContext } = useUnit({
     draft: $draft,
     busy: $isBusy,
     canSend: $canSend,
     files: $attachments,
+    context: $pageContext,
     setDraft: draftChanged,
     send: messageSent,
     addFiles: attachmentsAdded,
+    clearContext: pageContextChanged,
   })
 
   // Нативный input скрыт: кнопка отправляет в него файл через клик.
   const pickerRef = useRef<HTMLInputElement>(null)
 
+  // Что именно уйдёт на сервер: выделение информативнее заголовка страницы.
+  const contextLabel = context?.selection?.text ?? context?.title ?? context?.url ?? "Страница"
+
   return (
-    <div className="flex items-center gap-1.5 border-t p-2">
+    <div className="border-t">
+      {/* Контекст виден до отправки: пользователь может его убрать, а не догадываться. */}
+      {context && (
+        <div className="flex items-center gap-1.5 px-2 pt-1.5 text-xs text-muted-foreground">
+          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5">Контекст</span>
+          <span className="min-w-0 flex-1 truncate" title={contextLabel}>
+            {contextLabel}
+          </span>
+          <Button
+            aria-label="Убрать контекст страницы"
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => clearContext(null)}
+          >
+            <XIcon />
+          </Button>
+        </div>
+      )}
+
+      <div className="flex items-center gap-1.5 p-2">
       <Textarea
         value={draft}
         disabled={busy}
@@ -83,6 +109,7 @@ export function ChatComposer() {
           event.target.value = ""
         }}
       />
+      </div>
     </div>
   )
 }

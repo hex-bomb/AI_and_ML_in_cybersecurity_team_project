@@ -1,6 +1,10 @@
 package search
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 func TestRRFMergesAndRanksByScore(t *testing.T) {
 	// "a" есть в обеих ранжировках на первом месте — должен выиграть.
@@ -57,6 +61,7 @@ func TestToHitBuildsDownloadURL(t *testing.T) {
 	src := map[string]any{
 		"chunk_id":     "c1",
 		"document_id":  "d1",
+		"document_ref": "8f14e45f-ceea-467f-a1b2-3c4d5e6f7081",
 		"version_id":   "v1",
 		"title":        "T",
 		"text":         "X",
@@ -72,5 +77,47 @@ func TestToHitBuildsDownloadURL(t *testing.T) {
 	}
 	if len(hit.Locator.SectionPath) != 2 {
 		t.Errorf("section_path = %v", hit.Locator.SectionPath)
+	}
+	if hit.DocumentRef != "8f14e45f-ceea-467f-a1b2-3c4d5e6f7081" {
+		t.Errorf("document_ref = %q", hit.DocumentRef)
+	}
+}
+
+func TestScopeFilterUsesIndexFields(t *testing.T) {
+	// Имена полей в фильтре должны совпадать с маппингом ingest: расхождение
+	// не даёт ошибки, а молча исключает все документы из выдачи.
+	raw, err := json.Marshal(LexicalBody(Scope{Channels: []string{"public"}}, "q", 5, ""))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	body := string(raw)
+
+	if !strings.Contains(body, `"open_to_all":true`) {
+		t.Errorf("фильтр не использует open_to_all: %s", body)
+	}
+	if strings.Contains(body, `"open":true`) {
+		t.Errorf("в фильтре осталось несуществующее поле open: %s", body)
+	}
+	if !strings.Contains(body, `"group_keys":[]`) {
+		t.Errorf("nil-группы должны сериализоваться в пустой массив: %s", body)
+	}
+}
+
+func TestFocusBoostsWithoutFiltering(t *testing.T) {
+	// Привязка страницы — предпочтение: документ получает boost, но остальные
+	// не исключаются, иначе подсказка клиента стала бы фильтром доступа.
+	raw, err := json.Marshal(
+		LexicalBody(Scope{Channels: []string{"public"}}, "q", 5, "doc-ref"),
+	)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	body := string(raw)
+
+	if !strings.Contains(body, `"document_ref":{"boost":3,"value":"doc-ref"}`) {
+		t.Errorf("нет повышения для привязанного документа: %s", body)
+	}
+	if strings.Contains(body, `"filter":[{"term":{"document_ref"`) {
+		t.Errorf("привязка попала в фильтр: %s", body)
 	}
 }

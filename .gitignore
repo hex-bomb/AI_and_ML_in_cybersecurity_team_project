@@ -10,6 +10,10 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# Артефакты сборки Python-пакетов
+build/
+*.egg-info/
+
 # Java / Maven
 **/target/
 *.class
@@ -30,6 +34,9 @@ apps/backend/embedding/models/
 # Сгенерированное
 .site/
 site/
+
+# Резервные копии стенда: содержат данные, не место в репозитории
+backups/
 
 # Локальные секреты
 .env

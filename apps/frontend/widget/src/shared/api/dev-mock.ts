@@ -69,6 +69,8 @@ export async function mockAnswer(question: string): Promise<AnswerResponse> {
       status: "no_evidence",
       answer: "В доступной базе знаний не найдено подтверждающих материалов.",
       citations: [],
+      conversation_id: crypto.randomUUID(),
+      turn_id: crypto.randomUUID(),
       request_id: crypto.randomUUID(),
     }
   }
@@ -88,6 +90,8 @@ export async function mockAnswer(question: string): Promise<AnswerResponse> {
       source_url: hit.source_url,
       download_url: hit.download_url,
     })),
+    conversation_id: crypto.randomUUID(),
+    turn_id: crypto.randomUUID(),
     request_id: crypto.randomUUID(),
   }
 }

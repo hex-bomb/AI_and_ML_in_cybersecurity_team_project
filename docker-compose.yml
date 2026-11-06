@@ -109,7 +109,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      test: ["CMD-SHELL", "wget -qO- localhost:8080/actuator/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -125,6 +125,10 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
       JWKS_URL: http://auth:8080/.well-known/jwks.json
       DOCUMENTS_INTERNAL_TOKEN: ${DOCUMENTS_INTERNAL_TOKEN:-}
+      DOCUMENTS_BLOB_DIR: /data/blobs
+    volumes:
+      # Оригиналы документов: без этого тома backup базы неполный.
+      - docs-blobs:/data/blobs
     ports:
       - "127.0.0.1:18081:8080"   # /internal/* для заливки корпуса
       - "127.0.0.1:8082:8080"    # swagger-ui
@@ -134,11 +138,11 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      test: ["CMD-SHELL", "wget -qO- localhost:8080/actuator/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 60s
+      start_period: 40s
 
   retrieval:
     build: apps/backend/retrieval
@@ -158,6 +162,7 @@ services:
   answer:
     build: apps/backend/answer
     environment:
+      ANSWER_DATABASE_URL: postgresql://vektor:${POSTGRES_PASSWORD:-vektor-dev}@postgres:5432/vektor_answer
       RETRIEVAL_URL: http://retrieval:8080
       EMBEDDING_URL: http://embedding:8000
       DOCUMENTS_URL: http://documents:8080
@@ -170,6 +175,9 @@ services:
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-}
     ports:
       - "127.0.0.1:8083:8000"   # FastAPI /docs
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)\""]
       interval: 10s
@@ -239,3 +247,4 @@ volumes:
   pg-data:
   es-data:
   kafka-data:
+  docs-blobs:

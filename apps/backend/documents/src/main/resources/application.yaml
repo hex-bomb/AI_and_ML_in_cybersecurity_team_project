@@ -61,15 +61,24 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # Vault опционален (import: optional:vault://). Без этого флага
+    # /actuator/health отдаёт 503, и контейнер навсегда остаётся unhealthy.
+    vault:
+      enabled: false
 
 documents:
-  topic: ${DOCUMENTS_TOPIC:kb.document.upserted}
+  topic: ${DOCUMENTS_TOPIC:documents}
+  outbox-interval-ms: ${DOCUMENTS_OUTBOX_INTERVAL_MS:500}
+  outbox-batch: ${DOCUMENTS_OUTBOX_BATCH:100}
+  # Оригиналы и извлечённый текст. Каталог монтируется томом: без него
+  # loss блобов — это потеря документов, резервная копия БД тут не поможет.
+  blob-dir: ${DOCUMENTS_BLOB_DIR:/data/blobs}
   max-upload-bytes: ${MAX_UPLOAD_BYTES:5242880}
   # Предел текста, принимаемого внутренним ingest: без него один запрос
   # может занять диск и память целой базы.
   max-text-chars: ${MAX_TEXT_CHARS:2000000}
   jwks-url: ${JWKS_URL:http://auth:80/.well-known/jwks.json}
-  default-kb: ${AUTH_KB_ID:74ade984-591f-4382-a051-ef1898855868}
   # Общий секрет для /internal/*: входной router эти пути не маршрутизирует,
   # токен — защита приложения поверх этого.
   # Пустое значение запрещает все внутренние вызовы (fail closed).

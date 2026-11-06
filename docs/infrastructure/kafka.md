@@ -5,27 +5,38 @@
 
 ## Топики
 
-| Топик                  | Producer    | Consumer | Ключ          |
-| ---------------------- | ----------- | -------- | ------------- |
-| `kb.document.upserted` | `documents` | `ingest` | `external_id` |
+| Топик                      | Producer    | Consumer     | Ключ          |
+| -------------------------- | ----------- | ------------ | ------------- |
+| Событие                    | Публикует   | Обрабатывает | Ключ          |
+| -------------------------- | ----------- | ------------ | ------------- |
+| `document.version.created` | `documents` | `ingest`     | `document_id` |
+| `document.published`       | `documents` | `ingest`     | `document_id` |
+| `document.access.changed`  | `documents` | `ingest`     | `document_id` |
+| `document.withdrawn`       | `documents` | `ingest`     | `document_id` |
 
 Один раздел (`KAFKA_NUM_PARTITIONS=1`), репликация `1`. Порядок по ключу
 документа сохраняется, параллелизм внутри топика отсутствует.
+
+События пишет `documents` через outbox: отправка отделена от транзакции,
+поэтому падение между коммитом и отправкой не теряет событие.
 
 ## Схема сообщения
 
 ```json
 {
-  "kb_id": "74ade984-591f-4382-a051-ef1898855868",
-  "external_id": "sha256 содержимого",
-  "version_id": "uuid",
-  "audience": "public | employee",
+  "event": "document.version.created",
+  "document_id": "uuid документа",
+  "external_id": "about-vektor",
+  "version_id": "uuid версии",
+  "generation": 1,
   "title": "Название",
-  "sha256": "хеш текста"
+  "section": "Компания",
+  "content_sha256": "хеш текста"
 }
 ```
 
-Тела документа в сообщении нет: `ingest` забирает текст по
+В событии публикации есть `channels` и `group_keys` — ингест выставляет по ним
+видимость фрагментов. Тела документа в сообщении нет: `ingest` забирает текст по
 `GET /internal/documents/{external_id}/versions/{version_id}/text`. Это держит
 сообщения маленькими и убирает дублирование данных.
 

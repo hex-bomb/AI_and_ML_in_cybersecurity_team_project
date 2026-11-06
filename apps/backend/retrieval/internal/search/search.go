@@ -13,8 +13,11 @@ const (
 
 // Hit — один фрагмент в ответе наружу.
 type Hit struct {
-	ChunkID     string  `json:"chunk_id"`
-	DocumentID  string  `json:"document_id"`
+	ChunkID    string `json:"chunk_id"`
+	DocumentID string `json:"document_id"`
+	// DocumentRef — внутренний идентификатор документа. По нему answer
+	// сохраняет цитаты: внешний ключ не годится для ссылок в БД.
+	DocumentRef string  `json:"document_ref"`
 	VersionID   string  `json:"version_id"`
 	Title       string  `json:"title"`
 	Text        string  `json:"text"`
@@ -32,11 +35,15 @@ type Locator struct {
 	PageEnd     *int     `json:"page_end"`
 }
 
-// Scope — база знаний и аудитории, которым разрешён поиск.
+// Scope — каналы и группы principal'а, которым разрешён поиск.
 type Scope struct {
-	KB        string
-	Audiences []string
+	Channels []string
+	Groups   []string
 }
+
+// focusBoost поднимает фрагменты документа, к которому привязана страница.
+// Значение умеренное: подсказка не должна перебивать прямое совпадение по теме.
+const focusBoost = 3.0
 
 // Size — сколько кандидатов просить у каждой ветки: с запасом на слияние
 // и не меньше 10.
@@ -46,27 +53,53 @@ func Size(topK int) int {
 
 // scopeFilter — один фильтр на обе ветки: иначе лексика и kNN видят разные
 // документы.
+//
+// Условия отражают правило доступа сервиса documents: документ виден, если
+// опубликован, его канал входит в каналы principal'а и либо он открыт всем
+// в канале, либо его группа есть у principal'а.
 func scopeFilter(s Scope) []any {
+	groups := s.Groups
+	if groups == nil {
+		// nil сериализуется в null, а terms с null Elasticsearch отвергает.
+		groups = []string{}
+	}
 	return []any{
-		map[string]any{"term": map[string]any{"kb_id": s.KB}},
-		map[string]any{"terms": map[string]any{"audience": s.Audiences}},
+		map[string]any{"term": map[string]any{"published": true}},
+		map[string]any{"terms": map[string]any{"channels": s.Channels}},
+		map[string]any{"bool": map[string]any{
+			"minimum_should_match": 1,
+			"should": []any{
+				map[string]any{"term": map[string]any{"open_to_all": true}},
+				map[string]any{"terms": map[string]any{"group_keys": groups}},
+			},
+		}},
 	}
 }
 
 // LexicalBody — тело BM25-запроса по заголовку и тексту. title^3 поднимает
 // заголовок над текстом; embedding из _source не тянем — наружу он не нужен.
-func LexicalBody(s Scope, query string, size int) map[string]any {
+//
+// focus — документ, к которому привязана страница виджета. Это повышение, а не
+// фильтр: остальные документы по-прежнему участвуют в выдаче, а доступ от
+// подсказки не меняется.
+func LexicalBody(s Scope, query string, size int, focus string) map[string]any {
+	boolQuery := map[string]any{
+		"must": []any{map[string]any{"multi_match": map[string]any{
+			"query":  query,
+			"fields": []string{"title^3", "text"},
+			"type":   "best_fields",
+		}}},
+		"filter": scopeFilter(s),
+	}
+	if focus != "" {
+		boolQuery["should"] = []any{map[string]any{"term": map[string]any{
+			"document_ref": map[string]any{"value": focus, "boost": focusBoost},
+		}}}
+	}
 	return map[string]any{
 		"size":    size,
 		"_source": map[string]any{"excludes": []string{"embedding"}},
-		"query": map[string]any{"bool": map[string]any{
-			"must": []any{map[string]any{"multi_match": map[string]any{
-				"query":  query,
-				"fields": []string{"title^3", "text"},
-				"type":   "best_fields",
-			}}},
-			"filter": scopeFilter(s),
-		}},
+		"query":   map[string]any{"bool": boolQuery},
 	}
 }
 
@@ -128,11 +161,12 @@ func RRF(rankings [][]string, limit int) []Fused {
 func ToHit(src map[string]any, score float64) Hit {
 	documentID := str(src["document_id"])
 	return Hit{
-		ChunkID:    str(src["chunk_id"]),
-		DocumentID: documentID,
-		VersionID:  str(src["version_id"]),
-		Title:      str(src["title"]),
-		Text:       str(src["text"]),
+		ChunkID:     str(src["chunk_id"]),
+		DocumentID:  documentID,
+		DocumentRef: str(src["document_ref"]),
+		VersionID:   str(src["version_id"]),
+		Title:       str(src["title"]),
+		Text:        str(src["text"]),
 		Locator: Locator{
 			BlockIDs:    []string{},
 			SectionPath: stringsOf(src["section_path"]),

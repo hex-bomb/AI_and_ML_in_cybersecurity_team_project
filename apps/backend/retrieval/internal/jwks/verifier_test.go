@@ -58,7 +58,8 @@ func sign(t *testing.T, key *rsa.PrivateKey, kid string, exp int64) string {
 	t.Helper()
 	header := base64.RawURLEncoding.EncodeToString(mustJSON(map[string]string{"alg": "RS256", "kid": kid}))
 	payload := base64.RawURLEncoding.EncodeToString(mustJSON(map[string]any{
-		"sub": "s", "role": "employee", "kb": "kb1", "scp": []string{"public"}, "exp": exp,
+		"sub": "s", "role": "employee", "scp": []string{"public", "employee"},
+		"grp": []string{"legal"}, "exp": exp,
 	}))
 	signingInput := header + "." + payload
 	digest := sha256.Sum256([]byte(signingInput))
@@ -87,8 +88,11 @@ func TestVerifyAcceptsValidToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("валидный токен отклонён: %v", err)
 	}
-	if claims.KB != "kb1" || claims.Role != "employee" {
+	if claims.Role != "employee" || len(claims.Grp) != 1 || claims.Grp[0] != "legal" {
 		t.Errorf("claims разобраны неверно: %+v", claims)
+	}
+	if len(claims.Channels()) != 2 {
+		t.Errorf("сотрудник должен видеть оба канала: %v", claims.Channels())
 	}
 }
 

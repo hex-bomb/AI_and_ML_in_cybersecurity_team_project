@@ -26,48 +26,66 @@ import org.springframework.web.multipart.MultipartFile;
 public class Api {
 
     private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
-    // Список документов отдаётся порциями: без предела один большой kb
+    // Одна установка — одна организация: привязки страниц живут в одной
+    // установке, ключ можно не передавать.
+    private static final String DEFAULT_INSTALLATION = "default";
+    private static final String INSTALLATION_HEADER = "X-Widget-Installation";
+    // Список документов отдаётся порциями: без предела один большой корпус
     // гарантирует тяжёлый ответ и лишнюю память на каждом запросе.
     private static final int DEFAULT_LIST_LIMIT = 100;
     private static final int MAX_LIST_LIMIT = 500;
+    // Ниже порога документ считается нераспознанным: скан без текстового слоя
+    // индексировать нельзя, иначе поиск молча получит пустой документ.
+    private static final int MIN_TEXT_CHARS = 20;
 
     public record IngestRequest(
-        String kbId,
         String externalId,
         String title,
-        String audience,
+        String channel,
         String section,
         String text,
         String versionLabel
     ) {}
 
+    public record PublishRequest(UUID versionId) {}
+
+    public record BindingRequest(
+        String contentKey,
+        String externalId,
+        String sectionKey
+    ) {}
+
+    public record IndexReport(
+        int generation,
+        String embeddingModel,
+        int embeddingDim,
+        int chunkCount
+    ) {}
+
     private final DocumentRepository documents;
     private final Extract extract;
     private final TokenVerifier auth;
-    private final Events events;
+    private final BlobStore blobs;
     private final String internalToken;
     private final long maxBytes;
     private final int maxTextChars;
-    private final String defaultKb;
 
     public Api(
         DocumentRepository documents,
         Extract extract,
         TokenVerifier auth,
-        Events events,
+        BlobStore blobs,
         @Value("${documents.internal-token:}") String internalToken,
         @Value("${documents.max-upload-bytes}") long maxBytes,
-        @Value("${documents.max-text-chars:2000000}") int maxTextChars,
-        @Value("${documents.default-kb}") String defaultKb
+        @Value("${documents.max-text-chars:2000000}") int maxTextChars
     ) {
         this.documents = documents;
         this.extract = extract;
         this.auth = auth;
-        this.events = events;
+        this.blobs = blobs;
         this.internalToken = internalToken;
         this.maxBytes = maxBytes;
         this.maxTextChars = maxTextChars;
-        this.defaultKb = defaultKb;
     }
 
     @PostMapping(
@@ -78,10 +96,10 @@ public class Api {
         @RequestPart("file") MultipartFile file,
         @RequestParam(value = "title", required = false) String title,
         @RequestParam(
-            value = "audience",
+            value = "channel",
             required = false,
             defaultValue = "public"
-        ) String audience,
+        ) String channel,
         @CookieValue(
             name = "${auth.cookie-name:vektor_session}",
             required = false
@@ -101,29 +119,24 @@ public class Api {
         }
 
         var text = extract.text(file.getOriginalFilename(), content);
-        // Ключ документа — от содержимого: разные файлы с похожими именами не перетирают друг друга.
+        // Ключ документа — от содержимого: разные файлы с похожими именами
+        // не перетирают друг друга, а повторная загрузка того же файла
+        // возвращает существующую версию.
         var externalId = externalId(content);
         var name =
             title != null && !title.isBlank()
                 ? title.strip()
                 : stem(file.getOriginalFilename());
-        var version = documents.upsert(
-            claims.kb(),
+
+        var version = store(
             externalId,
             clip(name, 300),
-            audience(audience),
             "Загружено",
+            channel(channel),
+            content,
+            file.getContentType(),
             text,
             "upload"
-        );
-
-        events.upserted(
-            claims.kb(),
-            externalId,
-            version.id().toString(),
-            audience(audience),
-            name,
-            version.sha256()
         );
 
         return ResponseEntity.status(201).body(
@@ -161,7 +174,7 @@ public class Api {
         return ResponseEntity.ok(
             Map.of(
                 "documents",
-                documents.list(claims.kb(), bounded),
+                documents.list(claims.channels(), claims.groups(), bounded),
                 "request_id",
                 rid(request)
             )
@@ -175,28 +188,212 @@ public class Api {
             name = "${auth.cookie-name:vektor_session}",
             required = false
         ) String token
-    ) {
+    ) throws Exception {
         var claims = auth.verify(token);
-        var document = documents.latest(claims.kb(), externalId);
+        var found = documents.source(
+            externalId,
+            claims.channels(),
+            claims.groups()
+        );
         // Нет прав отдаём как «нет документа»: иначе 403 раскрывает,
         // что такой документ существует.
-        if (document.isEmpty() || !claims.canRead(document.get().audience())) {
+        if (found.isEmpty()) {
             throw Errors.notFound();
         }
+        var source = found.get();
+        var key = documents
+            .storageKey(source.textBlobId())
+            .orElseThrow(Errors::notFound);
         return ResponseEntity.ok()
             .contentType(new MediaType("text", "plain", StandardCharsets.UTF_8))
-            .body(document.get().text());
+            .body(new String(blobs.read(key), StandardCharsets.UTF_8));
     }
 
-    @PostMapping("/internal/documents")
-    public ResponseEntity<Object> ingest(
-        @RequestBody IngestRequest body,
+    @PostMapping("/api/v1/documents/{externalId}/publish")
+    public ResponseEntity<Object> publish(
+        @PathVariable String externalId,
+        @RequestBody(required = false) PublishRequest body,
+        @CookieValue(
+            name = "${auth.cookie-name:vektor_session}",
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        var claims = auth.verify(token);
+        if (!claims.employee()) {
+            throw Errors.forbidden();
+        }
+        var publication = documents.publish(
+            externalId,
+            body == null ? null : body.versionId()
+        );
+        return ResponseEntity.ok(
+            Map.of(
+                "document_id",
+                publication.externalId(),
+                "version_id",
+                publication.versionId().toString(),
+                "publication",
+                "published",
+                "channels",
+                publication.channels(),
+                "groups",
+                publication.groups(),
+                "request_id",
+                rid(request)
+            )
+        );
+    }
+
+    @PostMapping("/api/v1/documents/{externalId}/withdraw")
+    public ResponseEntity<Object> withdraw(
+        @PathVariable String externalId,
+        @CookieValue(
+            name = "${auth.cookie-name:vektor_session}",
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        var claims = auth.verify(token);
+        if (!claims.employee()) {
+            throw Errors.forbidden();
+        }
+        documents.withdraw(externalId);
+        return ResponseEntity.ok(
+            Map.of(
+                "document_id",
+                externalId,
+                "publication",
+                "withdrawn",
+                "request_id",
+                rid(request)
+            )
+        );
+    }
+
+    /** Публикация для заливки корпуса: у скрипта нет cookie, только внутренний токен. */
+    @PostMapping("/internal/publish/{externalId}")
+    public ResponseEntity<Object> publishInternal(
+        @PathVariable String externalId,
         @RequestHeader(
             name = INTERNAL_TOKEN_HEADER,
             required = false
         ) String token
     ) {
         checkInternal(token);
+        var publication = documents.publish(externalId, null);
+        return ResponseEntity.ok(
+            Map.of(
+                "document_id",
+                publication.externalId(),
+                "version_id",
+                publication.versionId().toString()
+            )
+        );
+    }
+
+    /** Привязка страницы: виджет спрашивает её по content_key из разметки. */
+    @GetMapping("/internal/page-bindings/{contentKey}")
+    public ResponseEntity<Object> bindingInternal(
+        @PathVariable String contentKey,
+        @RequestHeader(name = INSTALLATION_HEADER, required = false) String installation,
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        checkInternal(token);
+        var binding = documents.binding(
+            installation == null || installation.isBlank()
+                ? DEFAULT_INSTALLATION
+                : installation,
+            contentKey
+        );
+        if (binding == null) {
+            throw Errors.notFound();
+        }
+        return ResponseEntity.ok(
+            Map.of(
+                "content_key",
+                contentKey,
+                "external_id",
+                binding.externalId(),
+                "document_ref",
+                binding.documentRef().toString(),
+                "version_id",
+                binding.versionId() == null
+                    ? ""
+                    : binding.versionId().toString(),
+                "section_key",
+                binding.sectionKey() == null ? "" : binding.sectionKey(),
+                "request_id",
+                rid(request)
+            )
+        );
+    }
+
+    /** Создание привязки для сида и интеграций без админки. */
+    @PostMapping("/internal/page-bindings")
+    public ResponseEntity<Object> bindPageInternal(
+        @RequestBody BindingRequest body,
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        checkInternal(token);
+        if (
+            body.contentKey() == null ||
+            body.contentKey().isBlank() ||
+            body.externalId() == null ||
+            body.externalId().isBlank()
+        ) {
+            throw Errors.badRequest("нужны content_key и external_id");
+        }
+        documents.ensureInstallation(
+            DEFAULT_INSTALLATION,
+            "Установка по умолчанию",
+            "public",
+            java.util.List.of("http://localhost:8080")
+        );
+        documents.bindPage(
+            DEFAULT_INSTALLATION,
+            body.contentKey(),
+            body.externalId(),
+            body.sectionKey()
+        );
+        return ResponseEntity.ok(
+            Map.of(
+                "content_key",
+                body.contentKey(),
+                "document_id",
+                body.externalId(),
+                "request_id",
+                rid(request)
+            )
+        );
+    }
+
+    /** Пересобрать индекс: после восстановления из копии он не восстановится сам. */
+    @PostMapping("/internal/reindex")
+    public ResponseEntity<Object> reindexInternal(
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        checkInternal(token);
+        return ResponseEntity.ok(
+            Map.of("queued", documents.reindexPublished(), "request_id", rid(request))
+        );
+    }
+
+    @PostMapping("/internal/documents")
+    public ResponseEntity<Object> ingest(@RequestBody IngestRequest body)
+        throws Exception {
         if (
             body.externalId() == null ||
             body.externalId().isBlank() ||
@@ -207,34 +404,25 @@ public class Api {
         if (body.text().length() > maxTextChars) {
             throw Errors.tooLarge();
         }
-        var kb =
-            body.kbId() == null || body.kbId().isBlank()
-                ? defaultKb
-                : body.kbId();
-        var audience = audience(body.audience());
+        var text = body.text().strip();
+        if (text.length() < MIN_TEXT_CHARS) {
+            throw Errors.badRequest("в документе нет извлекаемого текста");
+        }
         var section = body.section() == null ? "Прочее" : body.section();
         var title = clip(
             body.title() == null ? body.externalId() : body.title(),
             300
         );
-        var label = body.versionLabel() == null ? "v1" : body.versionLabel();
 
-        var version = documents.upsert(
-            kb,
+        var version = store(
             body.externalId(),
             title,
-            audience,
             section,
-            body.text(),
-            label
-        );
-        events.upserted(
-            kb,
-            body.externalId(),
-            version.id().toString(),
-            audience,
-            title,
-            version.sha256()
+            channel(body.channel()),
+            null,
+            null,
+            text,
+            body.versionLabel() == null ? "v1" : body.versionLabel()
         );
 
         return ResponseEntity.ok(
@@ -249,6 +437,34 @@ public class Api {
         );
     }
 
+    /** Отчёт индексатора: версия становится ready только для текущей генерации. */
+    @PostMapping("/internal/versions/{versionId}/index")
+    public ResponseEntity<Object> indexed(
+        @PathVariable UUID versionId,
+        @RequestBody IndexReport report,
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token
+    ) {
+        checkInternal(token);
+        if (report.embeddingDim() <= 0 || report.generation() <= 0) {
+            throw Errors.badRequest(
+                "generation и embedding_dim должны быть > 0"
+            );
+        }
+        var accepted = documents.markIndexed(
+            versionId,
+            report.generation(),
+            report.embeddingModel(),
+            report.embeddingDim(),
+            report.chunkCount()
+        );
+        return ResponseEntity.ok(
+            Map.of("accepted", accepted, "version_id", versionId.toString())
+        );
+    }
+
     @GetMapping(
         value = "/internal/documents/{externalId}/versions/{versionId}/text",
         produces = MediaType.TEXT_PLAIN_VALUE
@@ -260,10 +476,14 @@ public class Api {
             name = INTERNAL_TOKEN_HEADER,
             required = false
         ) String token
-    ) {
+    ) throws Exception {
         checkInternal(token);
+        var blobId = documents
+            .textBlob(externalId, versionId)
+            .orElseThrow(Errors::notFound);
+        var key = documents.storageKey(blobId).orElseThrow(Errors::notFound);
         return ResponseEntity.ok(
-            documents.text(externalId, versionId).orElseThrow(Errors::notFound)
+            new String(blobs.read(key), StandardCharsets.UTF_8)
         );
     }
 
@@ -289,6 +509,70 @@ public class Api {
     }
 
     /**
+     * Сохраняет оригинал и извлечённый текст, затем создаёт версию.
+     *
+     * <p>Повторная загрузка того же текста не пишет блобы: версия ищется по
+     * хешу заранее, иначе каждый дубль оставлял бы мусор в хранилище.
+     */
+    private DocumentRepository.Version store(
+        String externalId,
+        String title,
+        String section,
+        String channel,
+        byte[] original,
+        String contentType,
+        String text,
+        String versionLabel
+    ) throws Exception {
+        var sha = DocumentRepository.sha256(text);
+        var existing = documents.versionId(externalId, sha);
+        if (existing.isPresent()) {
+            documents.setChannel(externalId, channel);
+            return new DocumentRepository.Version(existing.get(), sha, false);
+        }
+
+        var textBytes = text.getBytes(StandardCharsets.UTF_8);
+        var originalBytes = original == null ? textBytes : original;
+        var originalType =
+            contentType == null || contentType.isBlank()
+                ? "application/octet-stream"
+                : contentType;
+
+        var originalKey = blobs.put(originalBytes);
+        var textKey = original == null ? originalKey : blobs.put(textBytes);
+        var originalBlob = documents.insertBlob(
+            originalKey,
+            originalBytes.length,
+            sha256(originalBytes),
+            originalType
+        );
+        var textBlob =
+            original == null
+                ? originalBlob
+                : documents.insertBlob(
+                      textKey,
+                      textBytes.length,
+                      sha,
+                      "text/plain"
+                  );
+
+        return documents.upsert(
+            externalId,
+            title,
+            section,
+            originalBlob,
+            textBlob,
+            sha,
+            versionLabel,
+            "extract",
+            "1",
+            text.length(),
+            text.length() < 200 ? "low_text" : "ok",
+            channel
+        );
+    }
+
+    /**
      * Внутренние эндпоинты закрыты общим токеном: без NetworkPolicy в стенде
      * любой под в кластере мог бы вливать и читать документы.
      */
@@ -306,17 +590,17 @@ public class Api {
     }
 
     /**
-     * Аудитории — закрытый словарь, он же ограничение в схеме БД.
-     * Без проверки невалидное значение падало бы 500 на constraint.
+     * Канал — закрытый словарь, он же ограничение в схеме БД. Без проверки
+     * невалидное значение падало бы 500 на constraint.
      */
-    private static String audience(String raw) {
+    private static String channel(String raw) {
         if (raw == null || raw.isBlank()) {
             return "public";
         }
         var value = raw.strip().toLowerCase(Locale.ROOT);
         return switch (value) {
-            case "public", "employee" -> value;
-            default -> throw Errors.badRequest("audience: public или employee");
+            case "public", "internal" -> value;
+            default -> throw Errors.badRequest("channel: public или internal");
         };
     }
 
@@ -328,6 +612,11 @@ public class Api {
         var digest = MessageDigest.getInstance("SHA-256").digest(content);
         // 16 hex-символов — короткий id для URL; полный хеш хранится в версии.
         return HexFormat.of().formatHex(digest).substring(0, 16);
+    }
+
+    private static String sha256(byte[] content) throws Exception {
+        var digest = MessageDigest.getInstance("SHA-256").digest(content);
+        return HexFormat.of().formatHex(digest);
     }
 
     private static String stem(String filename) {

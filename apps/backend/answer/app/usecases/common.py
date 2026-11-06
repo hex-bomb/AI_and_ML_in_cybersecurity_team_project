@@ -14,6 +14,7 @@ async def answer_from_hits(
     history: Sequence[str],
     hits: Sequence[dict[str, Any]],
     citations: CitationBuilder = build_citations,
+    page: str = "",
 ) -> dict[str, Any]:
     """Сгенерировать ответ и цитаты по готовой выдаче.
 
@@ -21,7 +22,7 @@ async def answer_from_hits(
     вид цитат (у файла ссылки ведут не в хранилище документов).
     """
     try:
-        raw = await completer.complete(SYSTEM, build_prompt(question, history, hits))
+        raw = await completer.complete(SYSTEM, build_prompt(question, history, hits, page))
     except Unavailable as exc:
         raise AppError.llm_unavailable() from exc
 

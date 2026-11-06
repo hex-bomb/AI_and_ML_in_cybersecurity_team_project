@@ -201,9 +201,9 @@ paths:
                 title:
                   type: string
                   maxLength: 300
-                audience:
+                channel:
                   type: string
-                  enum: [public, employee]
+                  enum: [public, internal]
                   default: public
       responses:
         "201":
@@ -239,6 +239,64 @@ paths:
                 type: string
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/documents/{documentId}/publish:
+    post:
+      tags: [documents]
+      summary: Опубликовать готовую версию (сотрудник)
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                version_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Версия опубликована
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/documents/{documentId}/withdraw:
+    post:
+      tags: [documents]
+      summary: Вывести документ из публикации (сотрудник)
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Документ выведен из публикации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 components:
@@ -287,11 +345,15 @@ components:
           nullable: true
     SearchRequest:
       type: object
-      required: [kb_id]
       properties:
-        kb_id: { type: string, maxLength: 64 }
         query: { type: string, maxLength: 1000, default: "" }
         top_k: { type: integer, minimum: 1, maximum: 10, default: 5 }
+        focus_document_ref:
+          type: string
+          maxLength: 64
+          description: |
+            Документ, к которому привязана страница виджета. Повышает его
+            фрагменты в выдаче, но не ограничивает поиск и не меняет доступ.
     SearchHit:
       type: object
       required:
@@ -308,6 +370,9 @@ components:
       properties:
         chunk_id: { type: string }
         document_id: { type: string }
+        document_ref:
+          type: string
+          description: Внутренний идентификатор документа; по нему сохраняются цитаты.
         version_id: { type: string }
         title: { type: string }
         text: { type: string }
@@ -330,23 +395,46 @@ components:
           items:
             $ref: "#/components/schemas/SearchHit"
         request_id: { type: string }
-    AnswerTurn:
-      type: object
-      required: [role, text]
-      properties:
-        role: { type: string, enum: [user, assistant] }
-        text: { type: string, maxLength: 1000 }
     AnswerRequest:
       type: object
-      required: [kb_id, question]
+      required: [question]
       properties:
-        kb_id: { type: string, maxLength: 64 }
         question: { type: string, maxLength: 4000 }
-        history:
-          type: array
-          maxItems: 20
-          items:
-            $ref: "#/components/schemas/AnswerTurn"
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Пусто — сервер создаст диалог и вернёт идентификатор.
+        client_message_id:
+          type: string
+          maxLength: 100
+          description: |
+            Ключ намерения клиента. Повтор с тем же ключом возвращает сохранённый
+            ответ, другой текст с тем же ключом — 409.
+        page_context:
+          $ref: "#/components/schemas/PageContext"
+    PageContext:
+      type: object
+      description: |
+        Недоверенный контекст страницы из виджета. Влияет только на формулировку
+        поискового запроса; доступ к документам от него не зависит. Поля
+        обрезаются, адрес принимается только http/https без query и fragment.
+      properties:
+        url: { type: string, maxLength: 500 }
+        title: { type: string, maxLength: 300 }
+        content_key:
+          type: string
+          maxLength: 100
+          description: Подсказка для поиска привязки, не разрешение на чтение.
+        version_hint: { type: string, maxLength: 100 }
+        section_key: { type: string, maxLength: 100 }
+        selection:
+          type: object
+          required: [text]
+          properties:
+            text: { type: string, maxLength: 1000 }
+            prefix: { type: string, maxLength: 200 }
+            suffix: { type: string, maxLength: 200 }
     Citation:
       type: object
       required:
@@ -375,7 +463,8 @@ components:
         download_url: { type: string }
     AnswerResponse:
       type: object
-      required: [status, answer, citations, request_id]
+      required:
+        [status, answer, citations, request_id, conversation_id, turn_id]
       properties:
         status:
           type: string
@@ -385,6 +474,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Citation"
+        conversation_id: { type: string, format: uuid }
+        turn_id: { type: string, format: uuid }
         request_id: { type: string }
     FileCitation:
       type: object
@@ -423,8 +514,8 @@ components:
       properties:
         document_id: { type: string }
         title: { type: string }
-        audience: { type: string, enum: [public, employee] }
         section: { type: string }
+        publication: { type: string, enum: [draft, published, withdrawn] }
         versions: { type: integer }
     DocumentList:
       type: object
@@ -434,6 +525,20 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DocumentEntry"
+        request_id: { type: string }
+    PublicationResponse:
+      type: object
+      required: [document_id, publication, request_id]
+      properties:
+        document_id: { type: string }
+        version_id: { type: string }
+        publication: { type: string, enum: [published, withdrawn] }
+        channels:
+          type: array
+          items: { type: string, enum: [public, internal] }
+        groups:
+          type: array
+          items: { type: string }
         request_id: { type: string }
     Error:
       type: object

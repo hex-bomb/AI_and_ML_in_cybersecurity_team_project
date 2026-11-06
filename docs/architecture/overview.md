@@ -16,10 +16,10 @@
 
 | Сервис      | Язык               | Владеет                          | Профиль нагрузки                                     |
 | ----------- | ------------------ | -------------------------------- | ---------------------------------------------------- |
-| `auth`      | Java / Spring Boot | `auth_users`                     | редкие записи, дорогой `scrypt`, высокая цена ошибки |
+| `auth`      | Java / Spring Boot | `users`, `groups`, `memberships` | редкие записи, дорогой `scrypt`, высокая цена ошибки |
 | `documents` | Java / Spring Boot | `documents`, `document_versions` | CPU: PDFBox, POI; пишет события в Kafka              |
 | `retrieval` | Go, stdlib         | индекс Elasticsearch             | I/O с жёсткими таймаутами, много коротких запросов   |
-| `answer`    | Python / FastAPI   | ничего (stateless)               | сеть: LLM до 90 с, промпты                           |
+| `answer`    | Python / FastAPI   | `vektor_answer`: диалоги, цитаты | сеть: LLM до 90 с, промпты; пул соединений Postgres  |
 | `embedding` | Python / FastAPI   | ничего                           | CPU: ONNX, батчинг                                   |
 | `ingest`    | Python             | индекс (запись)                  | batch: Kafka -> фрагменты -> эмбеддинги -> bulk      |
 
@@ -78,16 +78,17 @@ PDF блокировала event loop.
 
 ## Права доступа
 
-Роль превращается в набор аудиторий в одном месте — в `auth`, при выпуске
+Роль превращается в набор каналов в одном месте — в `auth`, при выпуске
 токена:
 
-| Роль       | `scp`                   |
-| ---------- | ----------------------- |
-| `user`     | `["public"]`            |
-| `employee` | `["public","employee"]` |
+| Роль       | `scp`                   | Каналы               |
+| ---------- | ----------------------- | -------------------- |
+| `user`     | `["public"]`            | `public`             |
+| `employee` | `["public","employee"]` | `public`, `internal` |
 
-`retrieval` не выводит права из `role`: он фильтрует Elasticsearch по `scp` из
-подписанного токена. Второго источника истины нет: права считаются ровно один
+`retrieval` не выводит права из `role`: он фильтрует Elasticsearch по
+`channels` и `grp` из подписанного токена, а `documents` проверяет те же
+права по grants в своей базе.
 раз — в `auth` при выпуске токена, — иначе в распределённой системе они
 неизбежно разъедутся.
 

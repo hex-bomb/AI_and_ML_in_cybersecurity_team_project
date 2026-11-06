@@ -10,12 +10,12 @@
    "value": "http://localhost:8080"
   },
   {
-   "key": "kbId",
-   "value": "74ade984-591f-4382-a051-ef1898855868"
-  },
-  {
    "key": "documentId",
    "value": "internal-pricing"
+  },
+  {
+   "key": "conversationId",
+   "value": ""
   }
  ],
  "item": [
@@ -94,7 +94,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"query\":\"гарантия на станки\",\"top_k\":3}"
+       "raw": "{\"query\":\"гарантия на станки\",\"top_k\":3}"
       },
       "url": "{{baseUrl}}/api/v1/search"
      }
@@ -111,7 +111,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"query\":\"внутренний прайс скидки маржа\",\"top_k\":5}"
+       "raw": "{\"query\":\"внутренний прайс скидки маржа\",\"top_k\":5}"
       },
       "url": "{{baseUrl}}/api/v1/search"
      }
@@ -128,13 +128,13 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"question\":\"какая гарантия на станки?\",\"history\":[]}"
+       "raw": "{\"question\":\"какая гарантия на станки?\",\"client_message_id\":\"demo-1\"}"
       },
       "url": "{{baseUrl}}/api/v1/answers"
      }
     },
     {
-     "name": "answer with history",
+     "name": "answer (продолжение диалога)",
      "request": {
       "method": "POST",
       "header": [
@@ -145,7 +145,7 @@
       ],
       "body": {
        "mode": "raw",
-       "raw": "{\"kb_id\":\"{{kbId}}\",\"question\":\"а на лизинг?\",\"history\":[{\"role\":\"user\",\"text\":\"какая гарантия на станки?\"},{\"role\":\"assistant\",\"text\":\"24 месяца.\"}]}"
+       "raw": "{\"question\":\"а на лизинг?\",\"conversation_id\":\"{{conversationId}}\",\"client_message_id\":\"demo-2\"}"
       },
       "url": "{{baseUrl}}/api/v1/answers"
      }

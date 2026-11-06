@@ -41,6 +41,8 @@ export type Chat = {
   preview: string
   /** Меняется при каждом добавлении сообщения; в отличие от `createdAt`. */
   updatedAt: string
+  /** Диалог на стороне answer: появляется после первого ответа. */
+  conversationId?: string
   createdAt?: string
   pinned?: boolean
   unread?: boolean
