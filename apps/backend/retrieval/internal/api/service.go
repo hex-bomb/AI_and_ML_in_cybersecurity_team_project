@@ -25,7 +25,13 @@ func NewHybridSearch(es *search.ES, embedder *search.Embedder) *HybridSearch {
 
 // Search возвращает слитые хиты. Ошибка — только когда недоступны обе системы
 // поиска; отказ одной — деградация, а не отказ сервиса.
-func (s *HybridSearch) Search(ctx context.Context, scope search.Scope, query string, topK int) ([]search.Hit, error) {
+func (s *HybridSearch) Search(
+	ctx context.Context,
+	scope search.Scope,
+	query string,
+	topK int,
+	focus string,
+) ([]search.Hit, error) {
 	size := search.Size(topK)
 
 	// Лексический поиск не зависит от вектора: запускаем его сразу, чтобы
@@ -37,7 +43,7 @@ func (s *HybridSearch) Search(ctx context.Context, scope search.Scope, query str
 	// Буфер на 1: горутина не залипнет, даже если читатель уйдёт раньше.
 	lexCh := make(chan lexResult, 1)
 	go func() {
-		result, err := s.es.Search(ctx, search.LexicalBody(scope, query, size))
+		result, err := s.es.Search(ctx, search.LexicalBody(scope, query, size, focus))
 		lexCh <- lexResult{result, err}
 	}()
 

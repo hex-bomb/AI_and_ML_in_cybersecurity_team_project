@@ -10,6 +10,10 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# Артефакты сборки Python-пакетов
+build/
+*.egg-info/
+
 # Java / Maven
 **/target/
 *.class

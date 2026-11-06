@@ -65,7 +65,7 @@ def ask_question(
     clients: Clients = Depends(get_clients),
     dialogs: Dialogs = Depends(get_dialogs),
 ) -> AskQuestion:
-    return AskQuestion(clients, clients, dialogs, TOP_K)
+    return AskQuestion(clients, clients, dialogs, TOP_K, clients)
 
 
 def ask_about_file(clients: Clients = Depends(get_clients)) -> AskAboutFile:

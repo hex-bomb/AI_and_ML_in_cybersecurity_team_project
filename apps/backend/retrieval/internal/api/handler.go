@@ -24,6 +24,9 @@ const requestTimeout = 15 * time.Second
 type SearchRequest struct {
 	Query string `json:"query"`
 	TopK  int    `json:"top_k"`
+	// FocusDocumentRef — документ, к которому привязана страница виджета.
+	// Повышает его фрагменты, но не ограничивает выдачу и не меняет доступ.
+	FocusDocumentRef string `json:"focus_document_ref"`
 }
 
 // SearchResponse — ответ POST /api/v1/search; Status принимает "ok" или "no_results".
@@ -35,7 +38,7 @@ type SearchResponse struct {
 
 // SearchService — то, что нужно HTTP-слою от ядра поиска.
 type SearchService interface {
-	Search(ctx context.Context, scope search.Scope, query string, topK int) ([]search.Hit, error)
+	Search(ctx context.Context, scope search.Scope, query string, topK int, focus string) ([]search.Hit, error)
 }
 
 // Handler держит зависимости HTTP-слоя; маршруты регистрирует Routes.
@@ -114,7 +117,11 @@ func (h *Handler) searchHandler(w http.ResponseWriter, r *http.Request, claims j
 	defer cancel()
 
 	scope := search.Scope{Channels: claims.Channels(), Groups: claims.Grp}
-	hits, err := h.search.Search(ctx, scope, req.Query, req.TopK)
+	if len(req.FocusDocumentRef) > 64 {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "focus_document_ref слишком длинный", rid)
+		return
+	}
+	hits, err := h.search.Search(ctx, scope, req.Query, req.TopK, req.FocusDocumentRef)
 	if err != nil {
 		slog.Error("search failed", "err", err)
 		writeError(w, http.StatusServiceUnavailable, "SEARCH_UNAVAILABLE", "Поиск недоступен", rid)

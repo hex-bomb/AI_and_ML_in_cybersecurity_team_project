@@ -26,6 +26,10 @@ import org.springframework.web.multipart.MultipartFile;
 public class Api {
 
     private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
+    // Одна установка — одна организация: привязки страниц живут в одной
+    // установке, ключ можно не передавать.
+    private static final String DEFAULT_INSTALLATION = "default";
+    private static final String INSTALLATION_HEADER = "X-Widget-Installation";
     // Список документов отдаётся порциями: без предела один большой корпус
     // гарантирует тяжёлый ответ и лишнюю память на каждом запросе.
     private static final int DEFAULT_LIST_LIMIT = 100;
@@ -44,6 +48,12 @@ public class Api {
     ) {}
 
     public record PublishRequest(UUID versionId) {}
+
+    public record BindingRequest(
+        String contentKey,
+        String externalId,
+        String sectionKey
+    ) {}
 
     public record IndexReport(
         int generation,
@@ -278,6 +288,90 @@ public class Api {
                 publication.externalId(),
                 "version_id",
                 publication.versionId().toString()
+            )
+        );
+    }
+
+    /** Привязка страницы: виджет спрашивает её по content_key из разметки. */
+    @GetMapping("/internal/page-bindings/{contentKey}")
+    public ResponseEntity<Object> bindingInternal(
+        @PathVariable String contentKey,
+        @RequestHeader(name = INSTALLATION_HEADER, required = false) String installation,
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        checkInternal(token);
+        var binding = documents.binding(
+            installation == null || installation.isBlank()
+                ? DEFAULT_INSTALLATION
+                : installation,
+            contentKey
+        );
+        if (binding == null) {
+            throw Errors.notFound();
+        }
+        return ResponseEntity.ok(
+            Map.of(
+                "content_key",
+                contentKey,
+                "external_id",
+                binding.externalId(),
+                "document_ref",
+                binding.documentRef().toString(),
+                "version_id",
+                binding.versionId() == null
+                    ? ""
+                    : binding.versionId().toString(),
+                "section_key",
+                binding.sectionKey() == null ? "" : binding.sectionKey(),
+                "request_id",
+                rid(request)
+            )
+        );
+    }
+
+    /** Создание привязки для сида и интеграций без админки. */
+    @PostMapping("/internal/page-bindings")
+    public ResponseEntity<Object> bindPageInternal(
+        @RequestBody BindingRequest body,
+        @RequestHeader(
+            name = INTERNAL_TOKEN_HEADER,
+            required = false
+        ) String token,
+        HttpServletRequest request
+    ) {
+        checkInternal(token);
+        if (
+            body.contentKey() == null ||
+            body.contentKey().isBlank() ||
+            body.externalId() == null ||
+            body.externalId().isBlank()
+        ) {
+            throw Errors.badRequest("нужны content_key и external_id");
+        }
+        documents.ensureInstallation(
+            DEFAULT_INSTALLATION,
+            "Установка по умолчанию",
+            "public",
+            java.util.List.of("http://localhost:8080")
+        );
+        documents.bindPage(
+            DEFAULT_INSTALLATION,
+            body.contentKey(),
+            body.externalId(),
+            body.sectionKey()
+        );
+        return ResponseEntity.ok(
+            Map.of(
+                "content_key",
+                body.contentKey(),
+                "document_id",
+                body.externalId(),
+                "request_id",
+                rid(request)
             )
         );
     }

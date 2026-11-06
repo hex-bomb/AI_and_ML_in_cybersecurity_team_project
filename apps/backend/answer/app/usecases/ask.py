@@ -7,7 +7,7 @@ from app.db import ConversationNotFound, IdempotencyConflict, TurnInProgress, ci
 from app.errors import AppError, Unavailable
 from app.guard import blocked_reason
 from app.page_context import prompt_block, query_hint
-from app.ports import Completer, Dialogs, Retriever
+from app.ports import Binder, Completer, Dialogs, Retriever
 from app.rag import NO_EVIDENCE
 from app.usecases.common import answer_from_hits
 
@@ -45,14 +45,19 @@ class AskQuestion:
         completer: Completer,
         dialogs: Dialogs,
         top_k: int = 4,
+        binder: Binder | None = None,
     ) -> None:
         self._retriever = retriever
         self._completer = completer
         self._dialogs = dialogs
         self._top_k = top_k
+        self._binder = binder
 
     async def __call__(self, question: Question) -> dict[str, Any]:
         client_message_id = question.client_message_id or f"srv-{uuid.uuid4().hex}"
+        # Привязка разрешается до записи реплики: в истории остаётся то, на что
+        # сервер действительно опирался, а не ключ клиента.
+        page_context = await self._bind(question.page_context)
         try:
             started = await self._dialogs.begin(
                 conversation_id=question.conversation_id,
@@ -61,7 +66,7 @@ class AskQuestion:
                 client_message_id=client_message_id,
                 question=question.text,
                 request_id=question.request_id,
-                page_context=question.page_context,
+                page_context=page_context,
             )
         except ConversationNotFound as exc:
             raise AppError.not_found("CONVERSATION_NOT_FOUND", "Диалог не найден") from exc
@@ -83,7 +88,7 @@ class AskQuestion:
                 question.text,
                 started.history,
                 question.token,
-                question.page_context,
+                page_context,
             )
         except AppError as exc:
             await self._dialogs.fail(started.turn_id, exc.code)
@@ -104,6 +109,31 @@ class AskQuestion:
         )
         return payload
 
+    async def _bind(self, page_context: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Разрешить content_key серверной привязкой.
+
+        Клиент присылает ключ, а не документ: какой документ за ним стоит,
+        решает сервер. Нет привязки — контекст остаётся без неё, вопрос всё
+        равно обрабатывается.
+        """
+        if not page_context or self._binder is None:
+            return page_context
+        content_key = page_context.get("content_key")
+        if not content_key:
+            return page_context
+
+        binding = await self._binder.binding(str(content_key))
+        if not binding or not binding.get("document_ref"):
+            return page_context
+        return {
+            **page_context,
+            "binding": {
+                "document_ref": binding["document_ref"],
+                "external_id": binding.get("external_id", ""),
+                "section_key": binding.get("section_key", ""),
+            },
+        }
+
     async def _answer(
         self,
         text: str,
@@ -119,9 +149,10 @@ class AskQuestion:
         # него не находит нужный раздел. Права от этого не меняются.
         hint = query_hint(page_context)
         query = f"{hint} {text}" if hint else text
+        focus = str((page_context or {}).get("binding", {}).get("document_ref", ""))
 
         try:
-            hits = await self._retriever.search(query, self._top_k, token)
+            hits = await self._retriever.search(query, self._top_k, token, focus)
         except Unavailable as exc:
             raise AppError.search_unavailable() from exc
 

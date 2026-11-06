@@ -2,6 +2,7 @@ package ru.vektor.docs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -282,6 +283,33 @@ class DocumentRepositoryTest {
                 .query(Integer.class)
                 .single()
         );
+    }
+
+    @Test
+    void bindingResolvesOnlyForPublishedDocument() {
+        var version = store("doc-page", "Страница возврата товара", "public");
+        inTx(() -> repository.markIndexed(version.id(), 1, "e5", 1024, 1));
+        repository.ensureInstallation(
+            "default",
+            "Установка по умолчанию",
+            "public",
+            List.of("http://localhost:8080")
+        );
+        inTx(() -> {
+            repository.bindPage("default", "returns", "doc-page", "discounted");
+            return null;
+        });
+
+        // Черновик не привязывается: иначе страница сослалась бы на невидимый документ.
+        assertNull(repository.binding("default", "returns"));
+
+        inTx(() -> repository.publish("doc-page", null));
+
+        var binding = repository.binding("default", "returns");
+        assertEquals("doc-page", binding.externalId());
+        assertEquals(version.id(), binding.versionId());
+        assertEquals("discounted", binding.sectionKey());
+        assertNull(repository.binding("default", "unknown-key"));
     }
 
     @Test

@@ -30,10 +30,12 @@ class FakeRetriever:
         self.error = error
         self.calls = 0
         self.queries: list[str] = []
+        self.focus = ""
 
-    async def search(self, query: str, top_k: int, token: str):
+    async def search(self, query: str, top_k: int, token: str, focus: str = ""):
         self.calls += 1
         self.queries.append(query)
+        self.focus = focus
         if self.error:
             raise self.error
         return self.hits
@@ -130,3 +132,15 @@ class FakeDialogs:
 
     async def ping(self) -> None:
         self.pings += 1
+
+
+class FakeBinder:
+    """Привязка страницы в памяти: проверяет сценарий, а не HTTP."""
+
+    def __init__(self, binding: dict[str, Any] | None = None) -> None:
+        self.binding_value = binding
+        self.keys: list[str] = []
+
+    async def binding(self, content_key: str) -> dict[str, Any] | None:
+        self.keys.append(content_key)
+        return self.binding_value

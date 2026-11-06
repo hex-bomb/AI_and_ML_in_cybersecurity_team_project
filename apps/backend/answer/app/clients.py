@@ -1,6 +1,7 @@
 import asyncio
 import os
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import jwt
@@ -45,6 +46,9 @@ class Clients:
         self.documents_url = env("DOCUMENTS_URL", "http://localhost:8080").rstrip("/")
         self.llm_timeout = float(env("LLM_TIMEOUT", "90"))
         self.internal_token = env("DOCUMENTS_INTERNAL_TOKEN")
+        # Одна установка — одна организация: ключ установки нужен только для
+        # привязок страниц и по умолчанию один.
+        self.installation = env("WIDGET_INSTALLATION", "default")
         self._jwks = PyJWKClient(env("JWKS_URL"), cache_keys=True)
         self._http = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
         # LLM — самая дорогая и самая медленная зависимость: без предела
@@ -88,10 +92,16 @@ class Clients:
         key = await asyncio.to_thread(self._jwks.get_signing_key_from_jwt, token)
         return jwt.decode(token, key.key, algorithms=["RS256"], options={"require": ["exp"]})
 
-    async def search(self, query: str, top_k: int, token: str) -> list[dict[str, Any]]:
+    async def search(
+        self, query: str, top_k: int, token: str, focus: str = ""
+    ) -> list[dict[str, Any]]:
+        """Поиск по доступным документам. focus только повышает, не фильтрует."""
+        body: dict[str, Any] = {"query": query, "top_k": top_k}
+        if focus:
+            body["focus_document_ref"] = focus
         response = await self._http.post(
             f"{self.retrieval_url}/api/v1/search",
-            json={"query": query, "top_k": top_k},
+            json=body,
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
@@ -105,6 +115,28 @@ class Clients:
         if response.status_code != 200:
             raise Unavailable(f"embedding {response.status_code}")
         return response.json()["vectors"]
+
+    async def binding(self, content_key: str) -> dict[str, Any] | None:
+        """Привязка страницы к документу. Нет привязки — нет и подсказки.
+
+        Отказ documents не должен ломать ответ: контекст страницы опционален,
+        поэтому любая ошибка здесь означает «привязки нет».
+        """
+        if not content_key:
+            return None
+        try:
+            response = await self._http.get(
+                f"{self.documents_url}/internal/page-bindings/{quote(content_key, safe='')}",
+                headers={
+                    **({"X-Internal-Token": self.internal_token} if self.internal_token else {}),
+                    "X-Widget-Installation": self.installation,
+                },
+            )
+        except (httpx.HTTPError, OSError, TimeoutError):
+            return None
+        if response.status_code != 200:
+            return None
+        return response.json()
 
     async def extract(self, filename: str, content: bytes) -> str:
         """Разбор файла живёт в documents: PDFBox и POI не должны блокировать event loop.

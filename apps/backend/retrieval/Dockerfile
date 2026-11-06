@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS build
+FROM golang:1.26.10-alpine AS build
 WORKDIR /src
 # Сначала только манифесты — слой с зависимостями кэшируется, пока не меняется go.mod.
 COPY go.mod ./

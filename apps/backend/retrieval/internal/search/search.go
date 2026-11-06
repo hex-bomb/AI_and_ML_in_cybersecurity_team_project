@@ -41,6 +41,10 @@ type Scope struct {
 	Groups   []string
 }
 
+// focusBoost поднимает фрагменты документа, к которому привязана страница.
+// Значение умеренное: подсказка не должна перебивать прямое совпадение по теме.
+const focusBoost = 3.0
+
 // Size — сколько кандидатов просить у каждой ветки: с запасом на слияние
 // и не меньше 10.
 func Size(topK int) int {
@@ -74,18 +78,28 @@ func scopeFilter(s Scope) []any {
 
 // LexicalBody — тело BM25-запроса по заголовку и тексту. title^3 поднимает
 // заголовок над текстом; embedding из _source не тянем — наружу он не нужен.
-func LexicalBody(s Scope, query string, size int) map[string]any {
+//
+// focus — документ, к которому привязана страница виджета. Это повышение, а не
+// фильтр: остальные документы по-прежнему участвуют в выдаче, а доступ от
+// подсказки не меняется.
+func LexicalBody(s Scope, query string, size int, focus string) map[string]any {
+	boolQuery := map[string]any{
+		"must": []any{map[string]any{"multi_match": map[string]any{
+			"query":  query,
+			"fields": []string{"title^3", "text"},
+			"type":   "best_fields",
+		}}},
+		"filter": scopeFilter(s),
+	}
+	if focus != "" {
+		boolQuery["should"] = []any{map[string]any{"term": map[string]any{
+			"document_ref": map[string]any{"value": focus, "boost": focusBoost},
+		}}}
+	}
 	return map[string]any{
 		"size":    size,
 		"_source": map[string]any{"excludes": []string{"embedding"}},
-		"query": map[string]any{"bool": map[string]any{
-			"must": []any{map[string]any{"multi_match": map[string]any{
-				"query":  query,
-				"fields": []string{"title^3", "text"},
-				"type":   "best_fields",
-			}}},
-			"filter": scopeFilter(s),
-		}},
+		"query":   map[string]any{"bool": boolQuery},
 	}
 }
 

@@ -49,6 +49,17 @@ public class DocumentRepository {
         List<String> groups
     ) {}
 
+    /**
+     * Привязка страницы к документу: «этот блок сайта рассказывает про этот
+     * документ». Номер версии нужен, чтобы показать расхождение с опубликованной.
+     */
+    public record Binding(
+        String externalId,
+        UUID documentRef,
+        UUID versionId,
+        String sectionKey
+    ) {}
+
     private record ReindexSource(
         UUID documentId,
         String externalId,
@@ -308,6 +319,86 @@ public class DocumentRepository {
             enqueue("document.published", source.documentId(), payload);
         }
         return sources.size();
+    }
+
+    /** Привязка страницы для установки виджета. Нет привязки — нет и подсказки. */
+    public Binding binding(String installationKey, String contentKey) {
+        return jdbc
+            .sql(
+                """
+                select d.external_id, d.id as document_ref, d.published_version_id,
+                       b.section_key
+                  from page_bindings b
+                  join widget_installations i on i.id = b.installation_id
+                  join documents d on d.id = b.document_id
+                 where i.key = :installation and i.is_active
+                   and b.content_key = :content
+                   and d.publication = 'published' and d.lifecycle = 'active'
+                """
+            )
+            .param("installation", installationKey)
+            .param("content", contentKey)
+            .query((rs, row) ->
+                new Binding(
+                    rs.getString("external_id"),
+                    rs.getObject("document_ref", UUID.class),
+                    rs.getObject("published_version_id", UUID.class),
+                    rs.getString("section_key")
+                )
+            )
+            .optional()
+            .orElse(null);
+    }
+
+    /**
+     * Создать или заменить привязку. Установку создаёт {@code ensureInstallation}:
+     * без неё привязку некуда положить.
+     */
+    @Transactional
+    public void bindPage(
+        String installationKey,
+        String contentKey,
+        String externalId,
+        String sectionKey
+    ) {
+        var documentId = documentId(externalId);
+        jdbc.sql(
+            """
+            insert into page_bindings
+                (installation_id, content_key, document_id, section_key)
+            select i.id, :content, :document, :section
+              from widget_installations i where i.key = :installation
+            on conflict (installation_id, content_key) do update
+               set document_id = excluded.document_id,
+                   section_key = excluded.section_key
+            """
+        )
+            .param("content", contentKey)
+            .param("document", documentId)
+            .param("section", sectionKey)
+            .param("installation", installationKey)
+            .update();
+    }
+
+    /** Завести установку виджета, если её ещё нет. Повторный вызов ничего не меняет. */
+    public void ensureInstallation(
+        String key,
+        String name,
+        String channel,
+        List<String> origins
+    ) {
+        jdbc.sql(
+            """
+            insert into widget_installations (key, name, channel, allowed_origins)
+            values (:key, :name, :channel, :origins)
+            on conflict (key) do nothing
+            """
+        )
+            .param("key", key)
+            .param("name", name)
+            .param("channel", channel)
+            .param("origins", origins.toArray(String[]::new))
+            .update();
     }
 
     @Transactional
